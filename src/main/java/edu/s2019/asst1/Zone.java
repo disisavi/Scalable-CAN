@@ -2,12 +2,16 @@ package edu.s2019.asst1;
 
 import edu.s2019.asst1.implement.ZoneInterface;
 import java.awt.*;
-
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 
 public class Zone implements ZoneInterface {
     int height,widht;
     Point basePoint;
+    HashMap<Point, ArrayList<String>> fileList = new HashMap<>();
 
     public Zone(){
         height = 100;
@@ -23,6 +27,7 @@ public class Zone implements ZoneInterface {
 
     }
     public Zone splitZone(){
+
         Point newBasePoint = new Point();
         int newHeight = -1;
         int newWidth = -1;
@@ -42,7 +47,20 @@ public class Zone implements ZoneInterface {
             newWidth  = widht;
         }
 
-        return  new Zone(newHeight,newWidth,newBasePoint);
+        Zone newZone = new Zone(newHeight,newWidth,newBasePoint);
+
+        Iterator it = this.fileList.entrySet().iterator();
+        while (it.hasNext())
+        {
+            Map.Entry<Point,ArrayList<String>> fileEntry = (Map.Entry)it.next();
+            if(newZone.isPointInZone(fileEntry.getKey()))
+            {
+                newZone.fileList.put(fileEntry.getKey(),fileEntry.getValue());
+                it.remove();
+            }
+        }
+
+        return  newZone;
     }
 
     public boolean mergeZone(Zone zone)
@@ -85,22 +103,54 @@ public class Zone implements ZoneInterface {
             System.out.println("Upper Left --> " + this.basePoint.x + " " + (this.basePoint.y + height));
             System.out.println("Upper Right --> " + (this.basePoint.x + widht) + " " + (this.basePoint.y + height));
             System.out.println("Bottom Right --> " + (this.basePoint.x + widht) + " " + this.basePoint.y);
+            System.out.println("The File's are.. ");
+            Iterator it = this.fileList.entrySet().iterator();
+            while (it.hasNext())
+            {
+                Map.Entry<Point,ArrayList<String>> fileEntry = (Map.Entry)it.next();
+                System.out.println("Point "+fileEntry.getKey().x+" "+fileEntry.getKey().y+" has the following files");
+                for(int i = 0; i < fileEntry.getValue().size(); i++){
+                    System.out.println("\t "+(i+1)+" "+fileEntry.getValue().get(i));
+                }
+
+            }
             System.out.println("************************\n");
         }
+    }
+
+    public boolean isPointInZone(Point point){
+
+        if(((this.basePoint.x+this.widht) > point.x)
+        && (this.basePoint.y + this.height > point.y)
+        && (point.x >= this.basePoint.x)
+        &&( point.y >= this.basePoint.y)){
+            return true;
+        }
+        return false;
+    }
+
+    public boolean addFileToPoint(Point point,String fileName){
+        if(!isPointInZone(point)){
+            return false;
+        }
+
+        if(fileList.get(point)!= null){
+            fileList.get(point).add(fileName);
+        }
+        else {
+            ArrayList<String> toAdd = new ArrayList<>();
+            toAdd.add(fileName);
+            fileList.put(point,toAdd);
+        }
+
+        return true;
     }
 
     public static void main(String[] args){
 
         Zone zone = new Zone();
-        Zone newZone = zone.splitZone();
-        Zone tempZone = zone.splitZone();
-        tempZone = zone.splitZone();
-        newZone = tempZone.splitZone();
-        newZone.printZone();
         zone.printZone();
-        tempZone.printZone();
-        System.out.println(newZone.mergeZone(zone));
-        System.out.println(newZone.mergeZone(tempZone));
+        Zone newZone = zone.splitZone();
         zone.printZone();
         newZone.printZone();
     }

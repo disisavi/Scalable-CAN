@@ -19,8 +19,21 @@
                       <target>1.8</target>
                   </configuration>
               </plugin>
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+                 <artifactId>maven-jar-plugin</artifactId>
+                 <version>3.1.1</version>
+                 <configuration>
+                     <archive>
+                         <manifest>
+                             <addClasspath>true</addClasspath>
+                             <mainClass>edu.s2019.asst1.Zone</mainClass>
+                         </manifest>
+                     </archive>
+                 </configuration>
+             </plugin>
           </plugins>
-  
+
       </build>
 
     
