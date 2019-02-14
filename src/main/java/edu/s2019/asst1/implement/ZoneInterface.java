@@ -6,10 +6,10 @@ import java.awt.*;
 
 public interface ZoneInterface{
 
-
     Zone splitZone();
     boolean mergeZone(Zone zone);
     void printZone();
     boolean isPointInZone(Point point);
     boolean addFileToPoint(Point point,String fileName);
+    boolean zoneShareWall(Zone zone);
 }

@@ -14,8 +14,8 @@ public class Zone implements ZoneInterface {
     HashMap<Point, ArrayList<String>> fileList = new HashMap<>();
 
     public Zone(){
-        height = 100;
-        widht = 100;
+        height = 10;
+        widht = 10;
         basePoint = new Point(0,0);
     }
 
@@ -90,6 +90,28 @@ public class Zone implements ZoneInterface {
         return true;
     }
 
+    public boolean zoneShareWall(Zone zone){
+        if(zone.basePoint.x != basePoint.x && zone.basePoint.y == basePoint.y && height == zone.height) {
+            if (zone.basePoint.x <= basePoint.x) {
+                basePoint.x = zone.basePoint.x;
+
+            }
+            this.widht+=zone.widht;
+        }
+        else if(zone.basePoint.y != basePoint.y && widht == zone.widht && zone.basePoint.x == basePoint.x) {
+            if (zone.basePoint.y <= basePoint.y) {
+                basePoint.y = zone.basePoint.y;
+
+            }
+            this.height += zone.height;
+        }
+        else{
+            return false;
+        }
+
+        return true;
+    }
+
     public void printZone()
     {
         if(height == -1 )
@@ -97,24 +119,22 @@ public class Zone implements ZoneInterface {
             System.out.println("The zone doesnt exist or hasent been initialised");
         }
         else {
-            System.out.println("\n\n****************\n");
-            System.out.println("The Zone's 4 corners are (in X Y format) widht and height are " + widht + " " + height);
-            System.out.println("Bottom Left --> " + this.basePoint.x + " " + this.basePoint.y);
-            System.out.println("Upper Left --> " + this.basePoint.x + " " + (this.basePoint.y + height));
-            System.out.println("Upper Right --> " + (this.basePoint.x + widht) + " " + (this.basePoint.y + height));
-            System.out.println("Bottom Right --> " + (this.basePoint.x + widht) + " " + this.basePoint.y);
+            System.out.println("****************\n");
+            System.out.println("The Zone's boundries are... \n\t[{" + this.basePoint.x + ", " + this.basePoint.y+"}, {"
+            + this.basePoint.x + ", " + (this.basePoint.y + height)+"}, {" 
+            + (this.basePoint.x + widht) + ", " + (this.basePoint.y + height)+"}, {"
+            + (this.basePoint.x + widht) + ", " + this.basePoint.y+"}]");
             System.out.println("The File's are.. ");
             Iterator it = this.fileList.entrySet().iterator();
             while (it.hasNext())
             {
                 Map.Entry<Point,ArrayList<String>> fileEntry = (Map.Entry)it.next();
-                System.out.println("Point "+fileEntry.getKey().x+" "+fileEntry.getKey().y+" has the following files");
+                System.out.println("Point {"+fileEntry.getKey().x+", "+fileEntry.getKey().y+"} has the following files");
                 for(int i = 0; i < fileEntry.getValue().size(); i++){
-                    System.out.println("\t "+(i+1)+" "+fileEntry.getValue().get(i));
+                    System.out.println("\t"+(i+1)+"--> "+fileEntry.getValue().get(i));
                 }
 
             }
-            System.out.println("************************\n");
         }
     }
 
