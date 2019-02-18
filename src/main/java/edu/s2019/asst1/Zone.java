@@ -9,15 +9,17 @@ import java.util.Map;
 
 
 public class Zone implements ZoneInterface {
+    final static int maxHeight = 10, maxWidth = 10;
     int height,widht;
     Point basePoint;
     HashMap<Point, ArrayList<String>> fileList = new HashMap<>();
 
     public Zone(){
-        height = 10;
-        widht = 10;
+        height = Zone.maxHeight;
+        widht = Zone.maxWidth;
         basePoint = new Point(0,0);
     }
+
 
     public Zone(int height, int width,Point basePoint)
     {
@@ -65,15 +67,14 @@ public class Zone implements ZoneInterface {
 
     public boolean mergeZone(Zone zone)
     {
-        //Add conditions regarding the wall adjacency in case the current defined conditions are met, but they still dont share a wall.
-        if(zone.basePoint.x != basePoint.x && zone.basePoint.y == basePoint.y && height == zone.height) {
+        if(zoneShareXWall(zone)) {
             if (zone.basePoint.x <= basePoint.x) {
                 basePoint.x = zone.basePoint.x;
 
             }
             this.widht+=zone.widht;
         }
-        else if(zone.basePoint.y != basePoint.y && widht == zone.widht && zone.basePoint.x == basePoint.x) {
+        else if(zoneShareYWall(zone)) {
             if (zone.basePoint.y <= basePoint.y) {
                 basePoint.y = zone.basePoint.y;
 
@@ -91,25 +92,47 @@ public class Zone implements ZoneInterface {
     }
 
     public boolean zoneShareWall(Zone zone){
+        if(zoneShareXWall(zone)) {
+            return true;
+        }
+        else if(zoneShareYWall(zone)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean zoneShareXWall(Zone zone){
+        boolean returnValue = false;
         if(zone.basePoint.x != basePoint.x && zone.basePoint.y == basePoint.y && height == zone.height) {
-            if (zone.basePoint.x <= basePoint.x) {
-                basePoint.x = zone.basePoint.x;
 
+            if(zone.basePoint.x <  basePoint.x){
+                if(zone.basePoint.x + zone.widht == basePoint.x)
+                {
+                    returnValue = true;
+                }
+            } else if (basePoint.x + widht == zone.basePoint.x){
+                returnValue = true;
             }
-            this.widht+=zone.widht;
         }
-        else if(zone.basePoint.y != basePoint.y && widht == zone.widht && zone.basePoint.x == basePoint.x) {
-            if (zone.basePoint.y <= basePoint.y) {
-                basePoint.y = zone.basePoint.y;
+        return returnValue;
+    }
 
+    public boolean zoneShareYWall(Zone zone){
+        boolean returnValue = false;
+        if(zone.basePoint.y != basePoint.y && widht == zone.widht && zone.basePoint.x == basePoint.x){
+
+            if(zone.basePoint.y <  basePoint.y){
+                if(zone.basePoint.y + zone.height == basePoint.y)
+                {
+                    returnValue = true;
+                }
+            } else if (basePoint.y + height == zone.basePoint.y){
+                returnValue = true;
             }
-            this.height += zone.height;
-        }
-        else{
-            return false;
-        }
 
-        return true;
+        }
+        return returnValue;
     }
 
     public void printZone()
@@ -165,7 +188,10 @@ public class Zone implements ZoneInterface {
 
         return true;
     }
-
+    public int distanceToPoint(Point point){
+        int distance = (int) Math.sqrt(Math.pow((point.x - this.basePoint.x),2) + Math.pow((point.y - this.basePoint.y),2));
+        return distance;
+    }
     public static void main(String[] args){
 
         Zone zone = new Zone();
@@ -173,7 +199,6 @@ public class Zone implements ZoneInterface {
         Zone newZone = zone.splitZone();
         zone.printZone();
         newZone.printZone();
+        System.out.println(zone.zoneShareWall(newZone));
     }
-
-
 }

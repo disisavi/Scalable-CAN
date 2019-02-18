@@ -1,18 +1,29 @@
 package edu.s2019.asst1.implement;
 
 import edu.s2019.asst1.Node;
+import edu.s2019.asst1.Zone;
 
+import java.awt.*;
 import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 
-public interface NodeInterface {
-    InetAddress getSelfIP() throws SocketException, UnknownHostException;
-    Node splitNode();
-    boolean mergeNode(Node node);
-    boolean join();
-    void leave();
-    void printInfo();
-    String search(String fileName);
-    boolean isPeer(Node node);
+
+public interface NodeInterface extends Remote {
+    boolean equals(Node node) throws RemoteException ;
+    boolean bootstrap() throws RemoteException;
+    Zone getZone() throws RemoteException;
+    ArrayList<NodeInterface> getPeers() throws RemoteException;
+    InetAddress getIP() throws RemoteException;
+    String getName() throws RemoteException;
+    boolean splitWithNode(AbstractMap.SimpleEntry<String, String> nodeID) throws RemoteException;
+    AbstractMap.SimpleEntry<String, String> routeToNode(String nodeName,String nodeIP, Point point) throws RemoteException;
+    Point getCordinateToBind() throws RemoteException;
+    AbstractMap.SimpleEntry<String, String> findNodeToPoint(Point point) throws RemoteException;
+    Node.Message splitNode() throws RemoteException;
+    void shutdown() throws RemoteException;
 }
+
+
