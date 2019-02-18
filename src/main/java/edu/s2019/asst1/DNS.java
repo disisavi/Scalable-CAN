@@ -40,7 +40,7 @@ public class DNS implements DNSInterface {
             for (int i = 0; i < 3; i++) {
                 Random random = new Random();
                 int n = random.nextInt(nodesInCAN.size());
-                returnMap.put((String) keys[n], nodesInCAN.get(keys[i]));
+                returnMap.put((String) keys[n], nodesInCAN.get(keys[n]));
 
             }
         }

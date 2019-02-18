@@ -1,9 +1,11 @@
 package edu.s2019.asst1;
 
+import com.sun.xml.internal.bind.v2.TODO;
 import edu.s2019.asst1.implement.DNSInterface;
 import edu.s2019.asst1.implement.NodeInterface;
 
 import java.awt.*;
+import java.io.Serializable;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
@@ -24,7 +26,7 @@ public class Node implements NodeInterface {
     public static final int port = 1024;
 
 
-    public class Message {
+    public class Message implements Serializable {
         public Zone zone;
         public ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
     }
@@ -125,7 +127,7 @@ public class Node implements NodeInterface {
             NodeInterface node = (NodeInterface) noderegistry.lookup(nodeName);
             response = node.findNodeToPoint(point);
         } catch (Exception e) {
-            System.err.println("Client RMI failure couldnt Contact Node " + nodeName + " while Routing");
+            System.err.println("Client RMI failure couldnt Contact Node " + nodeName +" - "+nodeIP + " while Routing");
             System.err.println("Client exception: " + e.toString());
             e.printStackTrace();
         }
@@ -212,16 +214,21 @@ public class Node implements NodeInterface {
         // tell main to finish
 
     }
+/*
+TODO
+1. Make Bootstrap such that if its not able to contact any node, then consider all node dead and create new zone...
+2. Start work on other Modules as well...
 
-    public static void main(String[] args) {
+*/
+public static void main(String[] args) {
 
         Node node = new Node();
         try {
             NodeInterface nodeStub = (NodeInterface) UnicastRemoteObject.exportObject(node, Node.port);
-            Registry registry = LocateRegistry.createRegistry(Node.port + 1);
+            Registry registry = LocateRegistry.createRegistry(Node.port);
             registry.rebind(node.getName(), nodeStub);
             System.out.println("Client Server Startup Complete\nNode Name -- " + node.getName());
-            System.out.println("ip -- " + node.getIP().getHostAddress());
+            System.out.println("ip -- " + node.getIP().getAddress());
         } catch (AccessException e) {
             System.out.println("Client server Startup Failure " + e.getMessage());
             e.printStackTrace();
