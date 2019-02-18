@@ -34,7 +34,6 @@ public class DNS implements DNSInterface {
 
     @Override
     public HashMap<String, String> returnNodeList() {
-        System.out.println("Method called");
         Object[] keys = this.nodesInCAN.keySet().toArray();
         HashMap<String, String> returnMap = new HashMap<>();
         if (!nodesInCAN.isEmpty()) {
@@ -71,7 +70,7 @@ public class DNS implements DNSInterface {
             Registry registry = LocateRegistry.createRegistry(DNS.port);
             registry.rebind(name, stub);
             System.out.println("DNS Online");
-            System.out.println("DNS information --\nip --> " + ((DNS) dns).ip.getHostName());
+            System.out.println("DNS information --\nip --> " + ((DNS) dns).ip.getHostAddress());
             System.out.println("Nodes stores --> " + ((DNS) dns).nodesInCAN.size());
         } catch (AccessException e) {
             System.out.println("DNS server Failure " + e.getMessage());

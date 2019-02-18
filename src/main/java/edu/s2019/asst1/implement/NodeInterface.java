@@ -13,7 +13,6 @@ import java.util.ArrayList;
 
 public interface NodeInterface extends Remote {
     boolean equals(Node node) throws RemoteException ;
-    boolean bootstrap() throws RemoteException;
     Zone getZone() throws RemoteException;
     ArrayList<NodeInterface> getPeers() throws RemoteException;
     InetAddress getIP() throws RemoteException;

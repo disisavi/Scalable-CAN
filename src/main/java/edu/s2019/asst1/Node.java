@@ -23,6 +23,7 @@ public class Node implements NodeInterface {
     InetAddress nodeaddress;
     public static final int port = 1024;
 
+
     public class Message {
         public Zone zone;
         public ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
@@ -69,17 +70,24 @@ public class Node implements NodeInterface {
         return false;
     }
 
-    public boolean bootstrap() {
+    public DNSInterface getDnsStub() throws RemoteException, NotBoundException {
+
         Scanner scanner = new Scanner(System.in);
         System.out.println("Enter the DNS server ip ");
         String host = scanner.next();
+
+        Registry dnsregistry = LocateRegistry.getRegistry(host, Node.port);
+        DNSInterface dns = (DNSInterface) dnsregistry.lookup("DNS");
+        return dns;
+    }
+
+    public boolean bootstrap(DNSInterface dns) {
+
         HashMap<String, String> response = new HashMap<>();
         try {
-            Registry dnsregistry = LocateRegistry.getRegistry(host, Node.port);
-            DNSInterface dns = (DNSInterface) dnsregistry.lookup("DNS");
             response = dns.returnNodeList();
         } catch (Exception e) {
-            System.err.println("Client Bootstrap Failed for " + this.name);
+            System.err.println("Client Bootstrap Failure for " + this.name);
             System.err.println("Client exception: " + e.toString());
             e.printStackTrace();
             return false;
@@ -222,14 +230,22 @@ public class Node implements NodeInterface {
             e.printStackTrace();
         }
 
-
-        if (node.bootstrap()) {
-            System.out.println("Bootstrapping success... ");
-            node.printNode();
-        } else {
-            System.out.println("Bootstrap Error--- exiting the system");
-            node.shutdown();
+        try {
+            DNSInterface dnsStub = node.getDnsStub();
+            if (node.bootstrap(dnsStub)) {
+                dnsStub.registerNode(node);
+                System.out.println("Bootstrapping success... ");
+                node.printNode();
+            } else {
+                System.out.println("Bootstrap Error--- exiting the system");
+                node.shutdown();
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (NotBoundException e) {
+            e.printStackTrace();
         }
+
 
     }
 
