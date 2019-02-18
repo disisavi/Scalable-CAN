@@ -233,7 +233,7 @@ public class Node implements NodeInterface {
         try {
             DNSInterface dnsStub = node.getDnsStub();
             if (node.bootstrap(dnsStub)) {
-                dnsStub.registerNode(node);
+                dnsStub.registerNode(node.name,node.getIP().getHostAddress());
                 System.out.println("Bootstrapping success... ");
                 node.printNode();
             } else {

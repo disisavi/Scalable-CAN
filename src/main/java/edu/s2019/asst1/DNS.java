@@ -47,11 +47,11 @@ public class DNS implements DNSInterface {
         return returnMap;
     }
 
-    public void registerNode(Node node) {
-        nodesInCAN.put(node.name, node.nodeaddress.getHostAddress());
+    public void registerNode(String name, String iP) {
+        nodesInCAN.put(name, iP);
         System.out.println("Node Registered");
-        System.out.println("Name -- " + node.name);
-        System.out.println("IP -- " + node.nodeaddress.getHostAddress());
+        System.out.println("Name -- " + name);
+        System.out.println("IP -- " + iP);
     }
 
     public void deregisterNode(Node node) {
