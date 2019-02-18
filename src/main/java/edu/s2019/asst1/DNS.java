@@ -15,9 +15,9 @@ import java.util.HashMap;
 import java.util.Random;
 
 public class DNS implements DNSInterface {
+    public static final int port = 1024;
     public HashMap<String, String> nodesInCAN = new HashMap<>();
     public InetAddress ip;
-    public static final int port = 1024;
 
     public DNS() {
         try {
@@ -30,6 +30,27 @@ public class DNS implements DNSInterface {
             e.printStackTrace();
         }
 
+    }
+
+    public static void main(String[] args) {
+
+        try {
+            String name = "DNS";
+            DNS dns = new DNS();
+            DNSInterface stub = (DNSInterface) UnicastRemoteObject.exportObject(dns, DNS.port);
+            Registry registry = LocateRegistry.createRegistry(DNS.port);
+            registry.rebind(name, stub);
+            System.out.println("DNS Online");
+            System.out.println("DNS information --\nip --> " + dns.ip.getHostAddress());
+            System.out.println("Nodes stores --> " + dns.nodesInCAN.size());
+        } catch (AccessException e) {
+            System.out.println("DNS server Failure " + e.getMessage());
+            e.printStackTrace();
+
+        } catch (RemoteException e) {
+            System.out.println("DNS server Failure" + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -59,26 +80,5 @@ public class DNS implements DNSInterface {
         System.out.println("Node remove");
         System.out.println("Name -- " + node.name);
         System.out.println("IP -- " + node.nodeaddress.getHostAddress());
-    }
-
-    public static void main(String[] args) {
-
-        try {
-            String name = "DNS";
-            DNS dns = new DNS();
-            DNSInterface stub = (DNSInterface) UnicastRemoteObject.exportObject(dns, DNS.port);
-            Registry registry = LocateRegistry.createRegistry(DNS.port);
-            registry.rebind(name, stub);
-            System.out.println("DNS Online");
-            System.out.println("DNS information --\nip --> " + ((DNS) dns).ip.getHostAddress());
-            System.out.println("Nodes stores --> " + ((DNS) dns).nodesInCAN.size());
-        } catch (AccessException e) {
-            System.out.println("DNS server Failure " + e.getMessage());
-            e.printStackTrace();
-
-        } catch (RemoteException e) {
-            System.out.println("DNS server Failure" + e.getMessage());
-            e.printStackTrace();
-        }
     }
 }

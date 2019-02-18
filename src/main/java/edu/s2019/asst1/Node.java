@@ -1,6 +1,5 @@
 package edu.s2019.asst1;
 
-import com.sun.xml.internal.bind.v2.TODO;
 import edu.s2019.asst1.implement.DNSInterface;
 import edu.s2019.asst1.implement.NodeInterface;
 
@@ -19,17 +18,12 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class Node implements NodeInterface {
+    public static final int port = 1024;
     String name;
+    InetAddress nodeaddress;
     private Zone zone;
     private ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
-    InetAddress nodeaddress;
-    public static final int port = 1024;
 
-
-    public class Message implements Serializable {
-        public Zone zone;
-        public ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
-    }
 
     public Node() {
         try {
@@ -49,6 +43,49 @@ public class Node implements NodeInterface {
         }
     }
 
+    /*
+    TODO
+    1. Make Bootstrap such that if its not able to contact any node, then consider all node dead and create new zone...
+    2. Start work on other Modules as well...
+    3. Implement the Server which accepts commands
+    4. Implement the Hash Algo
+    */
+    public static void main(String[] args) {
+
+        Node node = new Node();
+        try {
+            NodeInterface nodeStub = (NodeInterface) UnicastRemoteObject.exportObject(node, Node.port);
+            Registry registry = LocateRegistry.createRegistry(Node.port);
+            registry.rebind(node.getName(), nodeStub);
+            System.out.println("Client Server Startup Complete\nNode Name -- " + node.getName());
+            System.out.println("ip -- " + node.getIP().getAddress());
+        } catch (AccessException e) {
+            System.out.println("Client server Startup Failure " + e.getMessage());
+            e.printStackTrace();
+        } catch (RemoteException e) {
+            System.out.println("Client server Startup Failure " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        try {
+            DNSInterface dnsStub = node.getDnsStub();
+            if (node.bootstrap(dnsStub)) {
+                dnsStub.registerNode(node.name, node.getIP().getHostAddress());
+                System.out.println("Bootstrapping success... ");
+                node.printNode();
+            } else {
+                System.out.println("Bootstrap Error--- exiting the system");
+                node.shutdown();
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (NotBoundException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
     public InetAddress getSelfIP() throws SocketException, UnknownHostException {
 
         final DatagramSocket socket = new DatagramSocket();
@@ -59,17 +96,11 @@ public class Node implements NodeInterface {
     }
 
     public boolean isPeer(Node node) {
-        if (this.zone.zoneShareWall(node.zone)) {
-            return true;
-        }
-        return false;
+        return this.zone.zoneShareWall(node.zone);
     }
 
     public boolean equals(Node node) {
-        if (this.nodeaddress.equals(node.nodeaddress) && this.name.equals(node.name)) {
-            return true;
-        }
-        return false;
+        return this.nodeaddress.equals(node.nodeaddress) && this.name.equals(node.name);
     }
 
     public DNSInterface getDnsStub() throws RemoteException, NotBoundException {
@@ -127,8 +158,8 @@ public class Node implements NodeInterface {
             NodeInterface node = (NodeInterface) noderegistry.lookup(nodeName);
             response = node.findNodeToPoint(point);
         } catch (Exception e) {
-            System.err.println("Client RMI failure couldnt Contact Node " + nodeName +" - "+nodeIP + " while Routing");
-            System.err.println("Client exception: " + e.toString());
+            System.err.println("Client RMI failure couldnt Contact Node " + nodeName + " - " + nodeIP + " while Routing");
+            System.out.println("Client exception: " + e.toString());
             e.printStackTrace();
         }
         return response;
@@ -214,47 +245,6 @@ public class Node implements NodeInterface {
         // tell main to finish
 
     }
-/*
-TODO
-1. Make Bootstrap such that if its not able to contact any node, then consider all node dead and create new zone...
-2. Start work on other Modules as well...
-
-*/
-public static void main(String[] args) {
-
-        Node node = new Node();
-        try {
-            NodeInterface nodeStub = (NodeInterface) UnicastRemoteObject.exportObject(node, Node.port);
-            Registry registry = LocateRegistry.createRegistry(Node.port);
-            registry.rebind(node.getName(), nodeStub);
-            System.out.println("Client Server Startup Complete\nNode Name -- " + node.getName());
-            System.out.println("ip -- " + node.getIP().getAddress());
-        } catch (AccessException e) {
-            System.out.println("Client server Startup Failure " + e.getMessage());
-            e.printStackTrace();
-        } catch (RemoteException e) {
-            System.out.println("Client server Startup Failure " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        try {
-            DNSInterface dnsStub = node.getDnsStub();
-            if (node.bootstrap(dnsStub)) {
-                dnsStub.registerNode(node.name,node.getIP().getHostAddress());
-                System.out.println("Bootstrapping success... ");
-                node.printNode();
-            } else {
-                System.out.println("Bootstrap Error--- exiting the system");
-                node.shutdown();
-            }
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        } catch (NotBoundException e) {
-            e.printStackTrace();
-        }
-
-
-    }
 
     void printNode() {
         System.out.println("IP -- " + this.getIP());
@@ -289,6 +279,11 @@ public static void main(String[] args) {
 
     public InetAddress getIP() {
         return nodeaddress;
+    }
+
+    public class Message implements Serializable {
+        public Zone zone;
+        public ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
     }
 
 }
