@@ -127,7 +127,7 @@ public class Node implements NodeInterface, Serializable {
             if (hostname.toUpperCase().equals(this.name.toUpperCase())) {
                 System.out.println("Remote Request Starts");
             }
-            System.out.println("**** File Will be inserted Locally in Node " + this.name);
+            System.out.println("**** File Will be inserted Locally from Node " + this.name);
 
             Point2D.Float filePoint = this.zone.fileToPoint(fileName);
             if (!this.zone.isPointInZone(filePoint)) {
@@ -429,7 +429,7 @@ public class Node implements NodeInterface, Serializable {
         StringBuilder returnBuilder = new StringBuilder();
 
         returnBuilder.append("\n*******************************\n");
-        returnBuilder.append("IP -- " + this.getIP());
+        returnBuilder.append("IP -- " + this.getIP().getHostAddress());
         returnBuilder.append("\nName -- " + this.name);
         returnBuilder.append("\nZone and file details ---\n");
         returnBuilder.append(this.zone.returnZoneStatus());
@@ -448,7 +448,7 @@ public class Node implements NodeInterface, Serializable {
 
     void printNode() {
         System.out.println("\n*******************************");
-        System.out.println("IP -- " + this.getIP());
+        System.out.println("IP -- " + this.getIP().getHostAddress());
         System.out.println("Name -- " + this.name);
         System.out.println("Zone and file details ---");
         this.zone.printZone();
@@ -486,8 +486,9 @@ public class Node implements NodeInterface, Serializable {
     void run() {
         Scanner scanner = new Scanner(System.in);
         boolean runAlways = true;
+        this.showAvailableComands();
         while (runAlways) {
-            this.showAvailableComands();
+
             String argumet = scanner.nextLine();
             String[] command = argumet.split(" ", 2);
 
@@ -513,7 +514,7 @@ public class Node implements NodeInterface, Serializable {
                             System.out.println("Kindly follow the correct Format of Insert command");
                             break;
                         }
-                        this.insertFile(insertParam[1], insertParam[2]);
+                        this.insertFile(insertParam[0], insertParam[1]);
                     }
                     break;
                 case "SHOW":
