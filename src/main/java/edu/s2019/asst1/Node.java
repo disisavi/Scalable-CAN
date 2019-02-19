@@ -4,7 +4,7 @@ import edu.s2019.asst1.implement.DNSInterface;
 import edu.s2019.asst1.implement.NodeInterface;
 import edu.s2019.asst1.helper.Message;
 
-import java.awt.*;
+import java.awt.geom.Point2D;
 import java.io.Serializable;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -40,16 +40,16 @@ public class Node implements NodeInterface, Serializable {
 
     /*
     TODO
+    1. Add clear option
+    2. Add  self option on view
     1. work on peer splitting algo
     2. Convert all points from Point to Point2d.float.
     3. Implement  one more command
     5. Add a few comments so that i have some fucking idea what ive done...
     */
     public static void main(String[] args) {
-
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
         Node node = new Node();
+        node.clearConsole();
         try {
 
             NodeInterface nodeStub = (NodeInterface) UnicastRemoteObject.exportObject(node, Node.port);
@@ -104,16 +104,11 @@ public class Node implements NodeInterface, Serializable {
         return ip;
     }
 
-    public boolean isPeer(Node node) {
-        return this.zone.zoneShareWall(node.zone);
-    }
-
     public boolean equals(Node node) {
         return this.nodeaddress.equals(node.nodeaddress) && this.name.equals(node.name);
     }
 
-
-    public boolean insertFile(String filename, Point point) {
+    public boolean insertFile(String filename, Point2D.Float point) {
 
         if (this.zone.isPointInZone(point)) {
             this.zone.addFileToPoint(point, filename);
@@ -126,35 +121,59 @@ public class Node implements NodeInterface, Serializable {
         return false;
     }
 
-    public boolean insertFile(String fileName) {
-        Point filePoint = this.zone.fileToPoint(fileName);
-        if (!this.zone.isPointInZone(filePoint)) {
-            AbstractMap.SimpleEntry<String, String> nodeID = null;
-            try {
-                nodeID = this.findNodeToPoint(filePoint);
-            } catch (RemoteException e) {
-                System.out.println("Couldn't Find the Node... Aborting the mission for now. After StackTace, Server will still be running for further operations");
-                System.out.println(e.getMessage());
-                e.printStackTrace();
-                return false;
+    public boolean insertFile(String hostname, String fileName) {
+        if (hostname.toUpperCase().equals("SELF")
+                || hostname.toUpperCase().equals(this.name.toUpperCase())) {
+            if (hostname.toUpperCase().equals(this.name.toUpperCase())) {
+                System.out.println("Remote Request Starts");
             }
-            try {
-                NodeInterface nodeStub = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
-                if (!nodeStub.insertFile(fileName, filePoint)) {
+            System.out.println("**** File Will be inserted Locally in Node " + this.name);
+
+            Point2D.Float filePoint = this.zone.fileToPoint(fileName);
+            if (!this.zone.isPointInZone(filePoint)) {
+                AbstractMap.SimpleEntry<String, String> nodeID = null;
+                try {
+                    nodeID = this.findNodeToPoint(filePoint);
+                } catch (RemoteException e) {
+                    System.out.println("Couldn't Find the Node... Aborting the mission for now. After StackTace, Server will still be running for further operations");
+                    System.out.println(e.getMessage());
+                    e.printStackTrace();
                     return false;
                 }
-            } catch (NotBoundException e) {
-                e.printStackTrace();
-                return false;
+                try {
+                    NodeInterface nodeStub = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
+                    if (!nodeStub.insertFile(fileName, filePoint)) {
+                        return false;
+                    }
+                } catch (NotBoundException e) {
+                    e.printStackTrace();
+                    return false;
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+
+            } else {
+                this.insertFile(fileName, filePoint);
+            }
+            return true;
+
+
+        } else {
+            System.out.println("****File will be added on the server " + hostname);
+            NodeInterface nodeStub = null;
+            try {
+                nodeStub = this.dnsStub.returnNode(hostname);
+                nodeStub.insertFile(hostname, fileName);
             } catch (RemoteException e) {
+                System.out.println("Unable to add File because. We are still on with business." + e.getMessage());
                 e.printStackTrace();
                 return false;
             }
 
-        } else {
-            this.insertFile(fileName, filePoint);
         }
-        return true;
+
+        return false;
     }
 
     public NodeInterface getNodeStub(String hostname, String iP) throws NotBoundException, RemoteException {
@@ -170,6 +189,20 @@ public class Node implements NodeInterface, Serializable {
             throw e;
         }
 
+    }
+
+    public void deRegisterNode(String name) {
+        if (!(name == null || name.toUpperCase().equals("self"))) {
+            if (this.peers.containsKey(name)) {
+                this.peers.remove(name);
+                try {
+                    this.dnsStub.deregisterNode(name);
+                } catch (RemoteException e) {
+                    System.out.println("Couldn't remove Node from DNS level. Maybe connection to DNS is lost.");
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public DNSInterface setDnsStub() throws RemoteException, NotBoundException {
@@ -201,7 +234,7 @@ public class Node implements NodeInterface, Serializable {
         } else {
             AbstractMap.SimpleEntry<String, String> nodeID = null;
             do {
-                Point p2 = getCordinateToBind();
+                Point2D.Float p2 = getCordinateToBind();
                 for (NodeInterface bootNode : response) {
                     nodeID = routeToNode(bootNode, p2);
                     if (nodeID != null) {
@@ -217,14 +250,14 @@ public class Node implements NodeInterface, Serializable {
         return true;
     }
 
-    public Point getCordinateToBind() {
+    public Point2D.Float getCordinateToBind() {
         Random random = new Random();
-        int x = random.nextInt(Zone.maxWidth);
-        int y = random.nextInt(Zone.maxHeight);
-        return new Point(x, y);
+        float x = random.nextInt((int) Zone.maxWidth);
+        float y = random.nextInt((int) Zone.maxHeight);
+        return new Point2D.Float(x, y);
     }
 
-    public AbstractMap.SimpleEntry<String, String> routeToNode(NodeInterface node, Point point) {
+    public AbstractMap.SimpleEntry<String, String> routeToNode(NodeInterface node, Point2D.Float point) {
         AbstractMap.SimpleEntry<String, String> response = null;
         try {
 
@@ -237,13 +270,13 @@ public class Node implements NodeInterface, Serializable {
         return response;
     }
 
-    public AbstractMap.SimpleEntry<String, String> findNodeToPoint(Point point) throws RemoteException {
+    public AbstractMap.SimpleEntry<String, String> findNodeToPoint(Point2D.Float point) throws RemoteException {
         if (this.zone.isPointInZone(point)) {
             AbstractMap.SimpleEntry<String, String> returnEntry = new AbstractMap.SimpleEntry<>(this.name, this.nodeaddress.getHostAddress());
             return returnEntry;
         }
 
-        int low = 11;
+        float low = 11;
         NodeInterface nodeLow = new Node();
         for (Map.Entry<String, NodeInterface> entry : this.peers.entrySet()) {
             NodeInterface node = entry.getValue();
@@ -263,14 +296,16 @@ public class Node implements NodeInterface, Serializable {
         Message response;
         try {
             NodeInterface node = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
-            response = node.splitNode(this.name,this.nodeaddress.getHostAddress());
+            response = node.splitNode(this.name, this.nodeaddress.getHostAddress());
             if (response == null) {
                 return false;
             }
 
             this.zone = response.zone;
-            if (response.peers != null){
+            if (response.peers != null) {
                 this.peers = response.peers;
+            } else {
+                this.peers = new HashMap<>();
             }
             this.peers.put(nodeID.getKey(), node);
 
@@ -291,12 +326,17 @@ public class Node implements NodeInterface, Serializable {
         System.out.println("***** \nContacted By remote server. We are now going to split this node.");
         ArrayList<Exception> exceptions = new ArrayList<>();
         Message returnMessage = new Message();
-        returnMessage.zone = this.zone.splitZone();
+        HashMap<String, NodeInterface> tempMap = new HashMap<>();
+        Zone tempZone = this.zone.splitZone();
         for (Map.Entry<String, NodeInterface> entry : this.peers.entrySet()) {
             NodeInterface peer = entry.getValue();
             try {
-                if (!peer.getZone().zoneShareWall(this.zone)) {
-                    returnMessage.peers.put(entry.getKey(), peer);
+                System.out.println("DEBUG :: " + (peer.getZone().iszoneANeigbour(this.zone)));
+                if (!peer.getZone().iszoneANeigbour(this.zone)) {
+                    this.peers.remove(entry.getKey());
+                }
+                if (peer.getZone().iszoneANeigbour(tempZone)) {
+                    tempMap.put(entry.getKey(), peer);
                 }
             } catch (RemoteException e) {
                 System.out.println("Error In contacting " + entry.getKey() + " -- " + e.getMessage()
@@ -305,7 +345,7 @@ public class Node implements NodeInterface, Serializable {
                 this.peers.remove(entry.getKey());
                 try {
                     this.dnsStub.deregisterNode(entry.getKey());
-                }catch (RemoteException f){
+                } catch (RemoteException f) {
                     f.printStackTrace();
                 }
             }
@@ -317,8 +357,8 @@ public class Node implements NodeInterface, Serializable {
         }
 
         try {
-            NodeInterface nodeStub = getNodeStub(name,iP);
-            this.peers.put(name,nodeStub);
+            NodeInterface nodeStub = getNodeStub(name, iP);
+            this.peers.put(name, nodeStub);
         } catch (NotBoundException e) {
             System.out.println("Couldnt contact Host Server. Hence, The host who called from SPlitting cant be added to neighbour");
             e.printStackTrace();
@@ -326,7 +366,9 @@ public class Node implements NodeInterface, Serializable {
             System.out.println("Couldnt contact Host Server. Hence, The host who called from SPlitting cant be added to neighbour");
             e.printStackTrace();
         }
-
+        returnMessage.zone = tempZone;
+        returnMessage.peers = tempMap;
+        System.out.println("***************\nEnd of request\n###########");
         return returnMessage;
 
     }
@@ -355,7 +397,7 @@ public class Node implements NodeInterface, Serializable {
         }
         // otherwise we wait 60seconds for references to be removed
         Runtime.getRuntime().gc();
-        // tell main to finish
+
 
         System.exit(-1);
 
@@ -368,16 +410,18 @@ public class Node implements NodeInterface, Serializable {
                 for (NodeInterface nodestub : allNodesInCAN) {
                     System.out.println(nodestub.returnNodeStatus());
                 }
-            } else if (nodeName.toUpperCase().equals(this.name.toUpperCase())) {
+            } else if ((nodeName.toUpperCase().equals(this.name.toUpperCase()))
+                    || (nodeName.toUpperCase().equals("SELF"))) {
                 this.printNode();
             } else {
                 NodeInterface nodeStub = dnsStub.returnNode(nodeName);
                 System.out.println(nodeStub.returnNodeStatus());
             }
         } catch (Exception e) {
-            System.out.println("Error in Printing Node. Printing StackTrace. After that, we will still be on with business");
+            System.out.println("Error in Printing Node. Printing StackTrace. After that, we will still be on with business.\nIF such a node exist in DNS,  we will now remove that node from DNS and Neighbour list");
             System.out.println(e.getMessage());
             e.printStackTrace();
+            this.deRegisterNode(nodeName);
         }
     }
 
@@ -442,10 +486,10 @@ public class Node implements NodeInterface, Serializable {
     void run() {
         Scanner scanner = new Scanner(System.in);
         boolean runAlways = true;
-        this.showAvailableComands();
         while (runAlways) {
+            this.showAvailableComands();
             String argumet = scanner.nextLine();
-            String[] command = argumet.split(" ", 0);
+            String[] command = argumet.split(" ", 2);
 
             switch (command[0].toUpperCase()) {
                 case "VIEW":
@@ -464,7 +508,12 @@ public class Node implements NodeInterface, Serializable {
                         System.out.println("Kindly fill all the parameters. The comand List and its syntax is available by \"show\" command");
                         break;
                     } else {
-                        this.insertFile(command[1]);
+                        String[] insertParam = command[1].split(" ", 0);
+                        if (insertParam.length == 1) {
+                            System.out.println("Kindly follow the correct Format of Insert command");
+                            break;
+                        }
+                        this.insertFile(insertParam[1], insertParam[2]);
                     }
                     break;
                 case "SHOW":
@@ -474,6 +523,8 @@ public class Node implements NodeInterface, Serializable {
                     System.out.println("************\nExiting");
                     runAlways = false;
                     break;
+                case "CLEAR":
+                    this.clearConsole();
                 default:
                     System.out.println("Please enter one of the printed commands");
                     this.showAvailableComands();
@@ -481,12 +532,18 @@ public class Node implements NodeInterface, Serializable {
         }
     }
 
+    void clearConsole() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+    }
+
     void showAvailableComands() {
         System.out.println("\n#####################");
         System.out.println("The following commands are available as now");
         System.out.println("1. View  --> Display the information of a specified peer peer where peer is a node identifier, not an IP address. The information includes the node identifier, the IP address, the coordinate, a list of neighbors, and the data items currently stored at the peer. If no peer is given, display the information of all currently active peers.");
-        System.out.println("2. Insert --> UnderConstruction");
+        System.out.println("2. Insert --> Insert NodeName(\"Self\" for local Node) FileName");
         System.out.println("3. Show --> To show list of all available commands");
+        System.out.println("4. Clear --> To Clear the console, so that we may better see the results.");
         System.out.println("Exit --> To exit\nPlease type in the command...");
     }
 }

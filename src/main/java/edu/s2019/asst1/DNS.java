@@ -37,9 +37,8 @@ public class DNS implements DNSInterface {
     }
 
     public static void main(String[] args) {
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
         DNS dns = new DNS();
+        dns.clearConsole();
         try {
             String name = "DNS";
             DNSInterface stub = (DNSInterface) UnicastRemoteObject.exportObject(dns, DNS.port);
@@ -109,9 +108,15 @@ public class DNS implements DNSInterface {
     }
 
     public void deregisterNode(String name) {
-        nodesInCAN.remove(name);
-        System.out.println("Node remove");
-        System.out.println("Name -- " + name);
+        System.out.println("\nNode Removal requested...");
+
+        if (nodesInCAN.containsKey(name)) {
+            nodesInCAN.remove(name);
+            System.out.println("Node removed");
+            System.out.println("Name -- " + name);
+        } else {
+            System.out.println("The Node " + name + " Doesn't exist");
+        }
     }
 
 
@@ -137,12 +142,17 @@ public class DNS implements DNSInterface {
         System.exit(-1);
     }
 
+    void clearConsole() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+    }
 
     void showAvailableComands() {
         System.out.println("\n#####################");
         System.out.println("The following commands are available as now for DNS");
         System.out.println("1. View  --> Display the names of all the Nodes in the network. This list may not be most up to date");
         System.out.println("2. Show --> To show list of all available commands");
+        System.out.println("3. Clear --> Clear the console");
         System.out.println("Exit --> To exit\nPlease type in the command...");
     }
 
@@ -165,6 +175,8 @@ public class DNS implements DNSInterface {
                     System.out.println("************\nExiting");
                     runAlways = false;
                     break;
+                case "CLEAR":
+                    this.clearConsole();
                 default:
                     System.out.println("Please enter one of the printed commands");
                     this.showAvailableComands();

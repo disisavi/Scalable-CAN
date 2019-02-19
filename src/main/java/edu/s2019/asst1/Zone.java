@@ -1,25 +1,26 @@
 package edu.s2019.asst1;
 
-import java.awt.*;
+
+import java.awt.geom.Point2D;
 import java.io.Serializable;
 import java.util.*;
 
 
 public class Zone implements Serializable {
     private static final long serialVersionUID = 3055231095479771380L;
-    final static int maxHeight = 10, maxWidth = 10;
-    int height, widht;
-    Point basePoint;
-    HashMap<Point, ArrayList<String>> fileList = new HashMap<>();
+    final static float maxHeight = 10, maxWidth = 10;
+    float height, widht;
+    Point2D.Float basePoint;
+    HashMap<Point2D.Float, ArrayList<String>> fileList = new HashMap<>();
 
     public Zone() {
         height = Zone.maxHeight;
         widht = Zone.maxWidth;
-        basePoint = new Point(0, 0);
+        basePoint = new Point2D.Float(0, 0);
     }
 
 
-    public Zone(int height, int width, Point basePoint) {
+    public Zone(float height, float width, Point2D.Float basePoint) {
         this.height = height;
         this.widht = width;
         this.basePoint = basePoint;
@@ -33,14 +34,15 @@ public class Zone implements Serializable {
         Zone newZone = zone.splitZone();
         zone.printZone();
         newZone.printZone();
-        System.out.println(zone.zoneShareWall(newZone));
+        newZone.splitZone();
+        System.out.println(zone.iszoneANeigbour(newZone));
     }
 
     public Zone splitZone() {
 
-        Point newBasePoint = new Point();
-        int newHeight = -1;
-        int newWidth = -1;
+        Point2D.Float newBasePoint = new Point2D.Float();
+        float newHeight = -1;
+        float newWidth = -1;
         if (widht >= height) {
             newBasePoint.x = basePoint.x + widht / 2;
             newBasePoint.y = basePoint.y;
@@ -59,7 +61,7 @@ public class Zone implements Serializable {
 
         Iterator it = this.fileList.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<Point, ArrayList<String>> fileEntry = (Map.Entry) it.next();
+            Map.Entry<Point2D.Float, ArrayList<String>> fileEntry = (Map.Entry) it.next();
             if (newZone.isPointInZone(fileEntry.getKey())) {
                 newZone.fileList.put(fileEntry.getKey(), fileEntry.getValue());
                 it.remove();
@@ -67,6 +69,32 @@ public class Zone implements Serializable {
         }
 
         return newZone;
+    }
+
+    public boolean iszoneANeigbour(Zone zone) {
+
+        boolean returnValue = false;
+        if ((this.basePoint.x == zone.basePoint.x)
+                && (this.basePoint.y != zone.basePoint.y)) {
+            if ((this.basePoint.y < zone.basePoint.y)
+                    && ((this.height + this.basePoint.y) == zone.basePoint.y)) {
+                returnValue = true;
+            } else if ((zone.basePoint.y < this.basePoint.y)
+                    && ((zone.basePoint.y + zone.height) == this.basePoint.y)) {
+                returnValue = true;
+            }
+        } else if ((this.basePoint.y == zone.basePoint.y)
+                && (this.basePoint.x != zone.basePoint.x)) {
+            if ((this.basePoint.x < zone.basePoint.x)
+                    && ((this.widht + this.basePoint.x) == zone.basePoint.x)) {
+                returnValue = true;
+            } else if ((zone.basePoint.x < this.basePoint.x)
+                    && ((zone.basePoint.x + zone.widht) == this.basePoint.x)) {
+                returnValue = true;
+            }
+        }
+
+        return returnValue;
     }
 
     public boolean mergeZone(Zone zone) {
@@ -86,16 +114,15 @@ public class Zone implements Serializable {
             return false;
         }
 
-        zone.basePoint = new Point(-1, -1);
+        zone.basePoint = new Point2D.Float(-1, -1);
         zone.height = -1;
         zone.widht = -1;
         return true;
     }
 
     public boolean zoneShareWall(Zone zone) {
-        if (zoneShareXWall(zone)) {
-            return true;
-        } else return zoneShareYWall(zone);
+
+        return (zoneShareYWall(zone) || zoneShareXWall(zone));
 
     }
 
@@ -143,7 +170,7 @@ public class Zone implements Serializable {
             returnBuilder.append("\nThe File's are.. ");
             Iterator it = this.fileList.entrySet().iterator();
             while (it.hasNext()) {
-                Map.Entry<Point, ArrayList<String>> fileEntry = (Map.Entry) it.next();
+                Map.Entry<Point2D.Float, ArrayList<String>> fileEntry = (Map.Entry) it.next();
                 returnBuilder.append("\nPoint {" + fileEntry.getKey().x + ", " + fileEntry.getKey().y + "} has the following files");
                 for (int i = 0; i < fileEntry.getValue().size(); i++) {
                     returnBuilder.append("\n\t" + (i + 1) + "--> " + fileEntry.getValue().get(i));
@@ -166,7 +193,7 @@ public class Zone implements Serializable {
             System.out.println("The File's are.. ");
             Iterator it = this.fileList.entrySet().iterator();
             while (it.hasNext()) {
-                Map.Entry<Point, ArrayList<String>> fileEntry = (Map.Entry) it.next();
+                Map.Entry<Point2D.Float, ArrayList<String>> fileEntry = (Map.Entry) it.next();
                 System.out.println("Point {" + fileEntry.getKey().x + ", " + fileEntry.getKey().y + "} has the following files");
                 for (int i = 0; i < fileEntry.getValue().size(); i++) {
                     System.out.println("\t" + (i + 1) + "--> " + fileEntry.getValue().get(i));
@@ -176,7 +203,7 @@ public class Zone implements Serializable {
         }
     }
 
-    public boolean isPointInZone(Point point) {
+    public boolean isPointInZone(Point2D.Float point) {
 
         return ((this.basePoint.x + this.widht) > point.x)
                 && (this.basePoint.y + this.height > point.y)
@@ -185,8 +212,8 @@ public class Zone implements Serializable {
     }
 
     //The hash Function
-    public Point fileToPoint(String fileName) {
-        Point returnPoint = new Point();
+    public Point2D.Float fileToPoint(String fileName) {
+        Point2D.Float returnPoint = new Point2D.Float();
         int charAtOdd = 0, charAtEven = 0;
 
         //string counted from 1
@@ -205,7 +232,7 @@ public class Zone implements Serializable {
     }
 
 
-    public boolean addFileToPoint(Point point, String fileName) {
+    public boolean addFileToPoint(Point2D.Float point, String fileName) {
         if (!isPointInZone(point)) {
             return false;
         }
@@ -221,8 +248,8 @@ public class Zone implements Serializable {
         return true;
     }
 
-    public int distanceToPoint(Point point) {
-        int distance = (int) Math.sqrt(Math.pow((point.x - this.basePoint.x), 2) + Math.pow((point.y - this.basePoint.y), 2));
+    public float distanceToPoint(Point2D.Float point) {
+        float distance = (float) Math.sqrt(Math.pow((point.x - this.basePoint.x), 2) + Math.pow((point.y - this.basePoint.y), 2));
         return distance;
     }
 }

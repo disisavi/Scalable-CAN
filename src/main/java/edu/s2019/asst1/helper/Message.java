@@ -13,14 +13,8 @@ public class Message implements Serializable {
     public Zone zone;
     public HashMap<String,NodeInterface> peers;
 
-    public static void main(String[] args){
-        System.out.println("Yellow");
-
-        HashMap<String,String> hp = null;
-        for(Map.Entry<String,String> entry: hp.entrySet()){
-            String value = entry.getValue();
-            System.out.println(entry.getKey());
-        }
+    public Message(){
+        this.peers = new HashMap<>();
     }
 }
 
