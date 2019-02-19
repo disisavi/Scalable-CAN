@@ -108,11 +108,10 @@ public class DNS implements DNSInterface {
         }
     }
 
-    public void deregisterNode(Node node) {
-        nodesInCAN.remove(node.name);
+    public void deregisterNode(String name) {
+        nodesInCAN.remove(name);
         System.out.println("Node remove");
-        System.out.println("Name -- " + node.name);
-        System.out.println("IP -- " + node.nodeaddress.getHostAddress());
+        System.out.println("Name -- " + name);
     }
 
 

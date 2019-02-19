@@ -24,7 +24,7 @@ public class Node implements NodeInterface, Serializable {
     String name;
     InetAddress nodeaddress;
     private Zone zone;
-    private HashMap<String, NodeInterface> peers = new HashMap<>();
+    private HashMap<String, NodeInterface> peers;
     private DNSInterface dnsStub;
 
 
@@ -32,6 +32,7 @@ public class Node implements NodeInterface, Serializable {
         try {
             this.nodeaddress = getSelfIP();
             this.name = nodeaddress.getHostName();
+            this.peers = new HashMap<>();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -157,7 +158,6 @@ public class Node implements NodeInterface, Serializable {
     }
 
     public NodeInterface getNodeStub(String hostname, String iP) throws NotBoundException, RemoteException {
-
         try {
             Registry noderegistry = LocateRegistry.getRegistry(iP, Node.port);
             NodeInterface node = (NodeInterface) noderegistry.lookup(hostname);
@@ -208,7 +208,7 @@ public class Node implements NodeInterface, Serializable {
                         break;
                     }
                 }
-            } while (nodeID != null && !splitWithNode(nodeID));
+            } while (nodeID != null && !this.splitWithNode(nodeID));
 
             if (nodeID == null) {
                 return false;
@@ -260,7 +260,7 @@ public class Node implements NodeInterface, Serializable {
     }
 
     public boolean splitWithNode(AbstractMap.SimpleEntry<String, String> nodeID) {
-        Message response = new Message();
+        Message response;
         try {
             NodeInterface node = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
             response = node.splitNode(this.name,this.nodeaddress.getHostAddress());
@@ -269,8 +269,10 @@ public class Node implements NodeInterface, Serializable {
             }
 
             this.zone = response.zone;
-            this.peers = response.peers;
-            this.peers.put(node.getName(), node);
+            if (response.peers != null){
+                this.peers = response.peers;
+            }
+            this.peers.put(nodeID.getKey(), node);
 
         } catch (Exception e) {
             System.err.println("Client RMI failure couldnt Contact Node " + nodeID.getKey() + " while splitting");
@@ -297,10 +299,15 @@ public class Node implements NodeInterface, Serializable {
                     returnMessage.peers.put(entry.getKey(), peer);
                 }
             } catch (RemoteException e) {
-                System.err.println("Error In contacting " + entry.getKey() + " -- " + e.getMessage()
+                System.out.println("Error In contacting " + entry.getKey() + " -- " + e.getMessage()
                         + "\nSo, We are going to remove the node from peer list. Detailed Printstack will be printed once we have contacted all the Peers");
                 exceptions.add(e);
                 this.peers.remove(entry.getKey());
+                try {
+                    this.dnsStub.deregisterNode(entry.getKey());
+                }catch (RemoteException f){
+                    f.printStackTrace();
+                }
             }
         }
         if (exceptions.size() > 0) {
@@ -309,9 +316,8 @@ public class Node implements NodeInterface, Serializable {
             }
         }
 
-        NodeInterface nodeStub = null;
         try {
-            nodeStub = getNodeStub(name,iP);
+            NodeInterface nodeStub = getNodeStub(name,iP);
             this.peers.put(name,nodeStub);
         } catch (NotBoundException e) {
             System.out.println("Couldnt contact Host Server. Hence, The host who called from SPlitting cant be added to neighbour");
@@ -320,7 +326,6 @@ public class Node implements NodeInterface, Serializable {
             System.out.println("Couldnt contact Host Server. Hence, The host who called from SPlitting cant be added to neighbour");
             e.printStackTrace();
         }
-
 
         return returnMessage;
 
@@ -417,7 +422,7 @@ public class Node implements NodeInterface, Serializable {
 
     @Override
     public String getName() {
-        return name;
+        return this.name;
     }
 
     @Override
