@@ -2,6 +2,7 @@ package edu.s2019.asst1;
 
 import edu.s2019.asst1.implement.DNSInterface;
 import edu.s2019.asst1.implement.NodeInterface;
+import edu.s2019.asst1.message.Message;
 
 import java.awt.*;
 import java.io.Serializable;
@@ -17,15 +18,16 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
-public class Node implements NodeInterface {
+public class Node  implements NodeInterface, Serializable {
     public static final int port = 1024;
+    private static final long serialVersionUID = -6663545639371364731L;
     String name;
     InetAddress nodeaddress;
     private Zone zone;
     private ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
 
 
-    public Node() {
+    public Node() throws RemoteException {
         try {
             this.nodeaddress = getSelfIP();
             this.name = nodeaddress.getHostName();
@@ -34,7 +36,7 @@ public class Node implements NodeInterface {
         }
     }
 
-    public Node(String name) {
+    public Node(String name) throws RemoteException{
         this.name = name;
         try {
             this.nodeaddress = getSelfIP();
@@ -50,15 +52,16 @@ public class Node implements NodeInterface {
     3. Implement the Server which accepts commands
     4. Implement the Hash Algo
     */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws RemoteException {
 
         Node node = new Node();
         try {
+
             NodeInterface nodeStub = (NodeInterface) UnicastRemoteObject.exportObject(node, Node.port);
             Registry registry = LocateRegistry.createRegistry(Node.port);
             registry.rebind(node.getName(), nodeStub);
             System.out.println("Client Server Startup Complete\nNode Name -- " + node.getName());
-            System.out.println("ip -- " + node.getIP().getAddress());
+            System.out.println("ip -- " + node.getIP().getHostAddress());
         } catch (AccessException e) {
             System.out.println("Client server Startup Failure " + e.getMessage());
             e.printStackTrace();
@@ -82,8 +85,6 @@ public class Node implements NodeInterface {
         } catch (NotBoundException e) {
             e.printStackTrace();
         }
-
-
     }
 
     public InetAddress getSelfIP() throws SocketException, UnknownHostException {
@@ -213,7 +214,7 @@ public class Node implements NodeInterface {
     }
 
 
-    public Node.Message splitNode() {
+    public Message splitNode() {
         if (this.zone.height < 2 || this.zone.widht < 2) {
             return null;
         }
@@ -281,9 +282,5 @@ public class Node implements NodeInterface {
         return nodeaddress;
     }
 
-    public class Message implements Serializable {
-        public Zone zone;
-        public ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
-    }
 
 }

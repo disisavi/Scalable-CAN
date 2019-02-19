@@ -2,6 +2,7 @@ package edu.s2019.asst1.implement;
 
 import edu.s2019.asst1.Node;
 import edu.s2019.asst1.Zone;
+import edu.s2019.asst1.message.Message;
 
 import java.awt.*;
 import java.net.InetAddress;
@@ -30,7 +31,7 @@ public interface NodeInterface extends Remote {
 
     AbstractMap.SimpleEntry<String, String> findNodeToPoint(Point point) throws RemoteException;
 
-    Node.Message splitNode() throws RemoteException;
+    Message splitNode() throws RemoteException;
 
     void shutdown() throws RemoteException;
 }

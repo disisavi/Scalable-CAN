@@ -1,15 +1,15 @@
 package edu.s2019.asst1;
 
-import edu.s2019.asst1.implement.ZoneInterface;
-
 import java.awt.*;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 
-public class Zone implements ZoneInterface {
+public class Zone implements Serializable {
+    private static final long serialVersionUID = 3055231095479771380L;
     final static int maxHeight = 10, maxWidth = 10;
     int height, widht;
     Point basePoint;
