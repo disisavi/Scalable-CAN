@@ -2,7 +2,7 @@ package edu.s2019.asst1;
 
 import edu.s2019.asst1.implement.DNSInterface;
 import edu.s2019.asst1.implement.NodeInterface;
-import edu.s2019.asst1.message.Message;
+import edu.s2019.asst1.helper.Message;
 
 import java.awt.*;
 import java.io.Serializable;
@@ -19,7 +19,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class Node implements NodeInterface, Serializable {
-    public static final int port = 1025;
+    public static final int port = 1024;
     private static final long serialVersionUID = -6663545639371364731L;
     String name;
     InetAddress nodeaddress;
@@ -32,15 +32,6 @@ public class Node implements NodeInterface, Serializable {
         try {
             this.nodeaddress = getSelfIP();
             this.name = nodeaddress.getHostName();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public Node(String name) {
-        this.name = name;
-        try {
-            this.nodeaddress = getSelfIP();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -65,7 +56,13 @@ public class Node implements NodeInterface, Serializable {
         try {
 
             NodeInterface nodeStub = (NodeInterface) UnicastRemoteObject.exportObject(node, Node.port);
-            Registry registry = LocateRegistry.createRegistry(Node.port);
+            Registry registry;
+            try {
+                registry = LocateRegistry.createRegistry(Node.port);
+            } catch (RemoteException e) {
+                System.out.println("Unable to create registry.... Checking if registry already exist");
+                registry = LocateRegistry.getRegistry(Node.port);
+            }
             registry.rebind(node.getName(), nodeStub);
             System.out.println("Client Server Startup Complete\nNode Name -- " + node.getName());
             System.out.println("ip -- " + node.getIP().getHostAddress());
@@ -116,6 +113,67 @@ public class Node implements NodeInterface, Serializable {
 
     public boolean equals(Node node) {
         return this.nodeaddress.equals(node.nodeaddress) && this.name.equals(node.name);
+    }
+
+
+    public boolean insertFile(String filename, Point point) {
+
+        if (this.zone.isPointInZone(point)) {
+            this.zone.addFileToPoint(point, filename);
+            System.out.println(" ----- Operation performed by remote object --- ");
+            System.out.println("File " + filename + "added\n Please find revised Node structure printed now");
+            this.printNode();
+            return true;
+        }
+        System.out.println("Couldnt Add file to the point " + point.toString());
+        return false;
+    }
+
+    public boolean insertFile(String fileName) {
+        Point filePoint = this.zone.fileToPoint(fileName);
+        if (!this.zone.isPointInZone(filePoint)) {
+            AbstractMap.SimpleEntry<String, String> nodeID = null;
+            try {
+                nodeID = this.findNodeToPoint(filePoint);
+            } catch (RemoteException e) {
+                System.out.println("Couldn't Find the Node... Aborting the mission for now. After StackTace, Server will still be running for further operations");
+                System.out.println(e.getMessage());
+                e.printStackTrace();
+                return false;
+            }
+            try {
+                NodeInterface nodeStub = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
+                if (!nodeStub.insertFile(fileName, filePoint)) {
+                    return false;
+                }
+            } catch (NotBoundException e) {
+                e.printStackTrace();
+                return false;
+            } catch (RemoteException e) {
+                e.printStackTrace();
+                return false;
+            }
+
+        } else {
+            this.insertFile(fileName, filePoint);
+        }
+        return true;
+    }
+
+    public NodeInterface getNodeStub(String hostname, String iP) throws NotBoundException, RemoteException {
+
+        try {
+            Registry noderegistry = LocateRegistry.getRegistry(iP, Node.port);
+            NodeInterface node = (NodeInterface) noderegistry.lookup(hostname);
+            return node;
+        } catch (RemoteException e) {
+            System.out.println("Unable to contact the Node..." + hostname);
+            throw e;
+        } catch (NotBoundException e) {
+            System.out.println("Unable to contact the Node..." + hostname);
+            throw e;
+        }
+
     }
 
     public DNSInterface setDnsStub() throws RemoteException, NotBoundException {
@@ -208,8 +266,7 @@ public class Node implements NodeInterface, Serializable {
     public boolean splitWithNode(AbstractMap.SimpleEntry<String, String> nodeID) {
         Message response = new Message();
         try {
-            Registry noderegistry = LocateRegistry.getRegistry(nodeID.getValue(), Node.port);
-            NodeInterface node = (NodeInterface) noderegistry.lookup(nodeID.getKey());
+            NodeInterface node = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
             response = node.splitNode();
             if (response != null) {
                 this.peers.add(node);
@@ -244,7 +301,8 @@ public class Node implements NodeInterface, Serializable {
     }
 
     public void shutdown(Exception exception) {
-        System.out.println("Shutting down RMI server");
+        //todo -- add it to serverServices...
+        System.out.println("Shutting down Client RMI server");
         if (exception != null) {
             System.out.println("The following error lead to the shutdown");
             System.err.println(exception.getMessage());
@@ -257,11 +315,11 @@ public class Node implements NodeInterface, Serializable {
             UnicastRemoteObject.unexportObject(this, true);
             Runtime.getRuntime().gc();
         } catch (AccessException e) {
-            e.printStackTrace();
+
         } catch (RemoteException e) {
-            e.printStackTrace();
+
         } catch (NotBoundException e) {
-            e.printStackTrace();
+
         }
         // otherwise we wait 60seconds for references to be removed
         Runtime.getRuntime().gc();
@@ -302,7 +360,7 @@ public class Node implements NodeInterface, Serializable {
         returnBuilder.append("\nPeers --");
         try {
             for (NodeInterface peers : this.peers) {
-                returnBuilder.append("\n"+peers.getName());
+                returnBuilder.append("\n" + peers.getName());
 
             }
         } catch (RemoteException e) {
@@ -350,10 +408,11 @@ public class Node implements NodeInterface, Serializable {
     void run() {
         Scanner scanner = new Scanner(System.in);
         boolean runAlways = true;
+        this.showAvailableComands();
         while (runAlways) {
-            String argumet = scanner.next();
+            String argumet = scanner.nextLine();
             String[] command = argumet.split(" ", 0);
-            this.showAvailableComands();
+
             switch (command[0].toUpperCase()) {
                 case "VIEW":
                     boolean showALlFlag = false;
@@ -367,7 +426,15 @@ public class Node implements NodeInterface, Serializable {
                     this.view(param, showALlFlag);
                     break;
                 case "INSERT":
-                    System.out.println("Under Construction");
+                    if (command.length == 1) {
+                        System.out.println("Kindly fill all the parameters. The comand List and its syntax is available by \"show\" command");
+                        break;
+                    } else {
+                        this.insertFile(command[1]);
+                    }
+                    break;
+                case "SHOW":
+                    this.showAvailableComands();
                     break;
                 case "EXIT":
                     System.out.println("************\nExiting");
@@ -381,9 +448,11 @@ public class Node implements NodeInterface, Serializable {
     }
 
     void showAvailableComands() {
+        System.out.println("\n#####################");
         System.out.println("The following commands are available as now");
         System.out.println("1. View  --> Display the information of a specified peer peer where peer is a node identifier, not an IP address. The information includes the node identifier, the IP address, the coordinate, a list of neighbors, and the data items currently stored at the peer. If no peer is given, display the information of all currently active peers.");
         System.out.println("2. Insert --> UnderConstruction");
+        System.out.println("3. Show --> To show list of all available commands");
         System.out.println("Exit --> To exit");
     }
 }

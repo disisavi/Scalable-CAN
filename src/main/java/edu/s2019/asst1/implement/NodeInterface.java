@@ -1,8 +1,7 @@
 package edu.s2019.asst1.implement;
 
-import edu.s2019.asst1.Node;
 import edu.s2019.asst1.Zone;
-import edu.s2019.asst1.message.Message;
+import edu.s2019.asst1.helper.Message;
 
 import java.awt.*;
 import java.net.InetAddress;
@@ -34,6 +33,8 @@ public interface NodeInterface extends Remote {
     Message splitNode() throws RemoteException;
 
     String returnNodeStatus() throws RemoteException;
+
+    public boolean insertFile(String filename, Point point) throws RemoteException;
 }
 
 

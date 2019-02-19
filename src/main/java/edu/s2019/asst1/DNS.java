@@ -16,6 +16,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.Scanner;
 
 public class DNS implements DNSInterface {
     public static final int port = 1024;
@@ -54,6 +55,9 @@ public class DNS implements DNSInterface {
             System.out.println("DNS server Failure...");
             dns.shutdown(e);
         }
+
+        dns.run();
+        dns.shutdown(null);
     }
 
     @Override
@@ -135,5 +139,55 @@ public class DNS implements DNSInterface {
         Runtime.getRuntime().gc();
 
         System.exit(-1);
+    }
+
+
+
+    void showAvailableComands() {
+        System.out.println("\n#####################");
+        System.out.println("The following commands are available as now for DNS");
+        System.out.println("1. View  --> Display the names of all the Nodes in the network. This list may not be most up to date");
+        System.out.println("2. Show --> To show list of all available commands");
+        System.out.println("Exit --> To exit");
+    }
+    void run() {
+        Scanner scanner = new Scanner(System.in);
+        boolean runAlways = true;
+        this.showAvailableComands();
+        while (runAlways) {
+            String argumet = scanner.nextLine();
+            String[] command = argumet.split(" ", 0);
+
+            switch (command[0].toUpperCase()) {
+                case "VIEW":
+                    this.printDNS();
+                    break;
+                case "SHOW":
+                    this.showAvailableComands();
+                    break;
+                case "EXIT":
+                    System.out.println("************\nExiting");
+                    runAlways = false;
+                    break;
+                default:
+                    System.out.println("Please enter one of the printed commands");
+                    this.showAvailableComands();
+            }
+        }
+    }
+
+    public void printDNS(){
+        System.out.println("************");
+        System.out.println("DNS running on\nIP "+this.ip.getHostAddress());
+        System.out.println("Hostname "+this.ip.getHostName());
+        if(nodesInCAN.size()>0){
+            System.out.println("Following nodes are registered");
+            for (String key: nodesInCAN.keySet()){
+                System.out.println(key);
+            }
+        }
+        else {
+            System.out.println("No Nodes registered to DNS");
+        }
     }
 }

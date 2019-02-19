@@ -2,10 +2,7 @@ package edu.s2019.asst1;
 
 import java.awt.*;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 
 public class Zone implements Serializable {
@@ -186,6 +183,27 @@ public class Zone implements Serializable {
                 && (point.x >= this.basePoint.x)
                 && (point.y >= this.basePoint.y);
     }
+
+    //The hash Function
+    public Point fileToPoint(String fileName) {
+        Point returnPoint = new Point();
+        int charAtOdd = 0, charAtEven = 0;
+
+        //string counted from 1
+        for (int i = 0; i < fileName.length(); i++) {
+            if ((1 % 2) == 0) {
+                charAtOdd += fileName.charAt(i);
+            } else {
+                charAtEven += fileName.charAt(i);
+            }
+        }
+        returnPoint.x = charAtOdd % 10;
+        returnPoint.y = charAtEven % 10;
+//        System.out.println("charAtOdd " + charAtOdd);
+//        System.out.println("Charateven " + charAtEven);
+        return returnPoint;
+    }
+
 
     public boolean addFileToPoint(Point point, String fileName) {
         if (!isPointInZone(point)) {

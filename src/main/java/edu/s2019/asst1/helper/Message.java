@@ -1,4 +1,4 @@
-package edu.s2019.asst1.message;
+package edu.s2019.asst1.helper;
 
 import edu.s2019.asst1.Zone;
 import edu.s2019.asst1.implement.NodeInterface;
