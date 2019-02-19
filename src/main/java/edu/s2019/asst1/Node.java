@@ -19,7 +19,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class Node implements NodeInterface, Serializable {
-    public static final int port = 1024;
+    public static final int port = 1025;
     private static final long serialVersionUID = -6663545639371364731L;
     String name;
     InetAddress nodeaddress;
@@ -84,8 +84,13 @@ public class Node implements NodeInterface, Serializable {
                 System.out.println("Bootstrapping success... ");
                 node.printNode();
             } else {
-                System.out.println("Bootstrap Error--- exiting the system");
-                node.shutdown(null);
+
+                System.out.println("####################\nBootstrap Error--- We will now repeat the proccess under assumption that we are the fist node and DNS was not updated till now.");
+
+                node.zone = new Zone();
+                node.dnsStub.registerNode(node.name, node.getIP().getHostAddress());
+                System.out.println("Bootstrapping success... ");
+                node.printNode();
             }
         } catch (RemoteException e) {
             node.shutdown(e);
@@ -119,7 +124,7 @@ public class Node implements NodeInterface, Serializable {
         System.out.println("Enter the DNS server ip ");
         String host = scanner.next();
 
-        Registry dnsregistry = LocateRegistry.getRegistry(host, Node.port);
+        Registry dnsregistry = LocateRegistry.getRegistry(host, DNS.port);
         DNSInterface dns = (DNSInterface) dnsregistry.lookup("DNS");
         return dns;
     }
@@ -289,15 +294,15 @@ public class Node implements NodeInterface, Serializable {
     public String returnNodeStatus() {
         StringBuilder returnBuilder = new StringBuilder();
 
-        returnBuilder.append("\n*******************************");
+        returnBuilder.append("\n*******************************\n");
         returnBuilder.append("IP -- " + this.getIP());
-        returnBuilder.append("Name -- " + this.name);
-        returnBuilder.append("Zone and file details ---");
+        returnBuilder.append("\nName -- " + this.name);
+        returnBuilder.append("\nZone and file details ---\n");
         returnBuilder.append(this.zone.returnZoneStatus());
-        returnBuilder.append("Peers --");
+        returnBuilder.append("\nPeers --");
         try {
             for (NodeInterface peers : this.peers) {
-                returnBuilder.append(peers.getName());
+                returnBuilder.append("\n"+peers.getName());
 
             }
         } catch (RemoteException e) {
@@ -348,13 +353,18 @@ public class Node implements NodeInterface, Serializable {
         while (runAlways) {
             String argumet = scanner.next();
             String[] command = argumet.split(" ", 0);
+            this.showAvailableComands();
             switch (command[0].toUpperCase()) {
                 case "VIEW":
                     boolean showALlFlag = false;
-                    if (command[1] == null) {
+                    String param = null;
+                    if (command.length == 1) {
                         showALlFlag = true;
+
+                    } else {
+                        param = command[1];
                     }
-                    this.view(command[1], showALlFlag);
+                    this.view(param, showALlFlag);
                     break;
                 case "INSERT":
                     System.out.println("Under Construction");
@@ -362,13 +372,15 @@ public class Node implements NodeInterface, Serializable {
                 case "EXIT":
                     System.out.println("************\nExiting");
                     runAlways = false;
+                    break;
                 default:
                     System.out.println("Please enter one of the printed commands");
                     this.showAvailableComands();
             }
         }
     }
-    void showAvailableComands(){
+
+    void showAvailableComands() {
         System.out.println("The following commands are available as now");
         System.out.println("1. View  --> Display the information of a specified peer peer where peer is a node identifier, not an IP address. The information includes the node identifier, the IP address, the coordinate, a list of neighbors, and the data items currently stored at the peer. If no peer is given, display the information of all currently active peers.");
         System.out.println("2. Insert --> UnderConstruction");

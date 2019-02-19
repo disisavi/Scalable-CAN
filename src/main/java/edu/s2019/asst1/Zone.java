@@ -143,13 +143,13 @@ public class Zone implements Serializable {
                     + this.basePoint.x + ", " + (this.basePoint.y + height) + "}, {"
                     + (this.basePoint.x + widht) + ", " + (this.basePoint.y + height) + "}, {"
                     + (this.basePoint.x + widht) + ", " + this.basePoint.y + "}]");
-            returnBuilder.append("The File's are.. ");
+            returnBuilder.append("\nThe File's are.. ");
             Iterator it = this.fileList.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<Point, ArrayList<String>> fileEntry = (Map.Entry) it.next();
-                returnBuilder.append("Point {" + fileEntry.getKey().x + ", " + fileEntry.getKey().y + "} has the following files");
+                returnBuilder.append("\nPoint {" + fileEntry.getKey().x + ", " + fileEntry.getKey().y + "} has the following files");
                 for (int i = 0; i < fileEntry.getValue().size(); i++) {
-                    returnBuilder.append("\t" + (i + 1) + "--> " + fileEntry.getValue().get(i));
+                    returnBuilder.append("\n\t" + (i + 1) + "--> " + fileEntry.getValue().get(i));
                 }
 
             }

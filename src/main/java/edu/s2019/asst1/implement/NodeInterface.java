@@ -25,7 +25,7 @@ public interface NodeInterface extends Remote {
 
     boolean splitWithNode(AbstractMap.SimpleEntry<String, String> nodeID) throws RemoteException;
 
-    public AbstractMap.SimpleEntry<String, String> routeToNode(NodeInterface  node, Point point) throws RemoteException;
+    public AbstractMap.SimpleEntry<String, String> routeToNode(NodeInterface node, Point point) throws RemoteException;
 
     Point getCordinateToBind() throws RemoteException;
 

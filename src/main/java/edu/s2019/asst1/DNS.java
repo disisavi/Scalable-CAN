@@ -76,7 +76,7 @@ public class DNS implements DNSInterface {
         return nodeStub;
     }
 
-    public ArrayList<NodeInterface> returnAllNodes(){
+    public ArrayList<NodeInterface> returnAllNodes() {
         return new ArrayList<>(this.nodesInCAN.values());
     }
 
