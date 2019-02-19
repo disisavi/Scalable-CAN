@@ -70,6 +70,16 @@ public class DNS implements DNSInterface {
         return returnList;
     }
 
+    @Override
+    public NodeInterface returnNode(String name) {
+        NodeInterface nodeStub = this.nodesInCAN.get(name);
+        return nodeStub;
+    }
+
+    public ArrayList<NodeInterface> returnAllNodes(){
+        return new ArrayList<>(this.nodesInCAN.values());
+    }
+
     public NodeInterface getRegisteryForNode(String name, String iP) throws RemoteException, NotBoundException {
         Registry nodeRegistry = LocateRegistry.getRegistry(iP, Node.port);
         NodeInterface nodeStub = (NodeInterface) nodeRegistry.lookup(name);
