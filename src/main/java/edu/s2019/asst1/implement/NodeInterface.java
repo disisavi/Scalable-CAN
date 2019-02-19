@@ -9,6 +9,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 
 public interface NodeInterface extends Remote {
@@ -16,7 +17,7 @@ public interface NodeInterface extends Remote {
 
     Zone getZone() throws RemoteException;
 
-    ArrayList<NodeInterface> getPeers() throws RemoteException;
+    HashMap<String,NodeInterface> getPeers() throws RemoteException;
 
     InetAddress getIP() throws RemoteException;
 
@@ -30,11 +31,11 @@ public interface NodeInterface extends Remote {
 
     AbstractMap.SimpleEntry<String, String> findNodeToPoint(Point point) throws RemoteException;
 
-    Message splitNode() throws RemoteException;
+    Message splitNode(String name, String iP) throws RemoteException;
 
     String returnNodeStatus() throws RemoteException;
 
-    public boolean insertFile(String filename, Point point) throws RemoteException;
+    boolean insertFile(String filename, Point point) throws RemoteException;
 }
 
 

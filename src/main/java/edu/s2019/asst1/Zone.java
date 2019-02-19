@@ -191,7 +191,7 @@ public class Zone implements Serializable {
 
         //string counted from 1
         for (int i = 0; i < fileName.length(); i++) {
-            if ((1 % 2) == 0) {
+            if ((i % 2) == 0) {
                 charAtOdd += fileName.charAt(i);
             } else {
                 charAtEven += fileName.charAt(i);

@@ -19,12 +19,12 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class Node implements NodeInterface, Serializable {
-    public static final int port = 1024;
+    public static final int port = 1032;
     private static final long serialVersionUID = -6663545639371364731L;
     String name;
     InetAddress nodeaddress;
     private Zone zone;
-    private ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
+    private HashMap<String, NodeInterface> peers = new HashMap<>();
     private DNSInterface dnsStub;
 
 
@@ -39,13 +39,9 @@ public class Node implements NodeInterface, Serializable {
 
     /*
     TODO
-    0. Make The server gracefully exit in case of failed bootstrap...
-    .5 Check and revise conditions for which node will deny splitting
-    .75 work on peer splitting algo
-    1. Implement the Server which accepts commands
-    2. Start work on other Modules as well...
-    3. Implement the Hash Algo
-    4. Make Bootstrap such that if its not able to contact any node, then consider all node dead and create new zone...
+    1. work on peer splitting algo
+    2. Convert all points from Point to Point2d.float.
+    3. Implement  one more command
     5. Add a few comments so that i have some fucking idea what ive done...
     */
     public static void main(String[] args) {
@@ -189,7 +185,7 @@ public class Node implements NodeInterface, Serializable {
 
     public boolean bootstrap() {
 
-        ArrayList<NodeInterface> response = new ArrayList<>();
+        ArrayList<NodeInterface> response;
         try {
             response = this.dnsStub.returnNodeList();
         } catch (Exception e) {
@@ -249,7 +245,8 @@ public class Node implements NodeInterface, Serializable {
 
         int low = 11;
         NodeInterface nodeLow = new Node();
-        for (NodeInterface node : this.peers) {
+        for (Map.Entry<String, NodeInterface> entry : this.peers.entrySet()) {
+            NodeInterface node = entry.getValue();
 
             if (node.getZone().isPointInZone(point)) {
                 return new AbstractMap.SimpleEntry<>(node.getName(), node.getIP().getHostAddress());
@@ -259,7 +256,6 @@ public class Node implements NodeInterface, Serializable {
                 nodeLow = node;
             }
         }
-
         return nodeLow.findNodeToPoint(point);
     }
 
@@ -267,38 +263,69 @@ public class Node implements NodeInterface, Serializable {
         Message response = new Message();
         try {
             NodeInterface node = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
-            response = node.splitNode();
-            if (response != null) {
-                this.peers.add(node);
+            response = node.splitNode(this.name,this.nodeaddress.getHostAddress());
+            if (response == null) {
+                return false;
             }
+
+            this.zone = response.zone;
+            this.peers = response.peers;
+            this.peers.put(node.getName(), node);
+
         } catch (Exception e) {
             System.err.println("Client RMI failure couldnt Contact Node " + nodeID.getKey() + " while splitting");
             System.err.println("Client exception: " + e.toString());
             e.printStackTrace();
-        }
-
-        if (response == null) {
             return false;
         }
-
-        this.zone = response.zone;
-        this.peers = response.peers;
-
         return true;
     }
 
 
-    public Message splitNode() {
+    public Message splitNode(String name, String iP) {
         if (this.zone.height < 2 || this.zone.widht < 2) {
             return null;
         }
-
+        System.out.println("***** \nContacted By remote server. We are now going to split this node.");
+        ArrayList<Exception> exceptions = new ArrayList<>();
         Message returnMessage = new Message();
         returnMessage.zone = this.zone.splitZone();
-        //To correct soon ===
-        returnMessage.peers = this.peers;
+        for (Map.Entry<String, NodeInterface> entry : this.peers.entrySet()) {
+            NodeInterface peer = entry.getValue();
+            try {
+                if (!peer.getZone().zoneShareWall(this.zone)) {
+                    returnMessage.peers.put(entry.getKey(), peer);
+                }
+            } catch (RemoteException e) {
+                System.err.println("Error In contacting " + entry.getKey() + " -- " + e.getMessage()
+                        + "\nSo, We are going to remove the node from peer list. Detailed Printstack will be printed once we have contacted all the Peers");
+                exceptions.add(e);
+                this.peers.remove(entry.getKey());
+            }
+        }
+        if (exceptions.size() > 0) {
+            for (Exception e : exceptions) {
+                e.printStackTrace();
+            }
+        }
+
+        NodeInterface nodeStub = null;
+        try {
+            nodeStub = getNodeStub(name,iP);
+            this.peers.put(name,nodeStub);
+        } catch (NotBoundException e) {
+            System.out.println("Couldnt contact Host Server. Hence, The host who called from SPlitting cant be added to neighbour");
+            e.printStackTrace();
+        } catch (RemoteException e) {
+            System.out.println("Couldnt contact Host Server. Hence, The host who called from SPlitting cant be added to neighbour");
+            e.printStackTrace();
+        }
+
+
         return returnMessage;
+
     }
+
 
     public void shutdown(Exception exception) {
         //todo -- add it to serverServices...
@@ -359,8 +386,9 @@ public class Node implements NodeInterface, Serializable {
         returnBuilder.append(this.zone.returnZoneStatus());
         returnBuilder.append("\nPeers --");
         try {
-            for (NodeInterface peers : this.peers) {
-                returnBuilder.append("\n" + peers.getName());
+            for (String peername : this.peers.keySet()) {
+                NodeInterface peer = this.peers.get(peername);
+                returnBuilder.append("\n" + peer.getName());
 
             }
         } catch (RemoteException e) {
@@ -377,8 +405,9 @@ public class Node implements NodeInterface, Serializable {
         this.zone.printZone();
         System.out.println("Peers --");
         try {
-            for (NodeInterface peers : this.peers) {
-                System.out.println(peers.getName());
+            for (String peerName : this.peers.keySet()) {
+                NodeInterface peer = this.peers.get(peerName);
+                System.out.println(peer.getName());
 
             }
         } catch (RemoteException e) {
@@ -397,7 +426,7 @@ public class Node implements NodeInterface, Serializable {
     }
 
     @Override
-    public ArrayList<NodeInterface> getPeers() {
+    public HashMap<String, NodeInterface> getPeers() {
         return peers;
     }
 
@@ -453,6 +482,6 @@ public class Node implements NodeInterface, Serializable {
         System.out.println("1. View  --> Display the information of a specified peer peer where peer is a node identifier, not an IP address. The information includes the node identifier, the IP address, the coordinate, a list of neighbors, and the data items currently stored at the peer. If no peer is given, display the information of all currently active peers.");
         System.out.println("2. Insert --> UnderConstruction");
         System.out.println("3. Show --> To show list of all available commands");
-        System.out.println("Exit --> To exit");
+        System.out.println("Exit --> To exit\nPlease type in the command...");
     }
 }

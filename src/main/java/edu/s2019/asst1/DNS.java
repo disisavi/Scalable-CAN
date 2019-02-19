@@ -129,11 +129,8 @@ public class DNS implements DNSInterface {
             UnicastRemoteObject.unexportObject(this, true);
             Runtime.getRuntime().gc();
         } catch (AccessException e) {
-            e.printStackTrace();
         } catch (RemoteException e) {
-            e.printStackTrace();
         } catch (NotBoundException e) {
-            e.printStackTrace();
         }
 
         Runtime.getRuntime().gc();
@@ -142,14 +139,14 @@ public class DNS implements DNSInterface {
     }
 
 
-
     void showAvailableComands() {
         System.out.println("\n#####################");
         System.out.println("The following commands are available as now for DNS");
         System.out.println("1. View  --> Display the names of all the Nodes in the network. This list may not be most up to date");
         System.out.println("2. Show --> To show list of all available commands");
-        System.out.println("Exit --> To exit");
+        System.out.println("Exit --> To exit\nPlease type in the command...");
     }
+
     void run() {
         Scanner scanner = new Scanner(System.in);
         boolean runAlways = true;
@@ -176,17 +173,16 @@ public class DNS implements DNSInterface {
         }
     }
 
-    public void printDNS(){
+    public void printDNS() {
         System.out.println("************");
-        System.out.println("DNS running on\nIP "+this.ip.getHostAddress());
-        System.out.println("Hostname "+this.ip.getHostName());
-        if(nodesInCAN.size()>0){
+        System.out.println("DNS running on\nIP " + this.ip.getHostAddress());
+        System.out.println("Hostname " + this.ip.getHostName());
+        if (nodesInCAN.size() > 0) {
             System.out.println("Following nodes are registered");
-            for (String key: nodesInCAN.keySet()){
+            for (String key : nodesInCAN.keySet()) {
                 System.out.println(key);
             }
-        }
-        else {
+        } else {
             System.out.println("No Nodes registered to DNS");
         }
     }
