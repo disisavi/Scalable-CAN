@@ -13,7 +13,7 @@ import java.util.ArrayList;
 
 
 public interface NodeInterface extends Remote {
-    boolean equals(Node node) throws RemoteException;
+
 
     Zone getZone() throws RemoteException;
 
@@ -33,7 +33,6 @@ public interface NodeInterface extends Remote {
 
     Message splitNode() throws RemoteException;
 
-    void shutdown() throws RemoteException;
 }
 
 

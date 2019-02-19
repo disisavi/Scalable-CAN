@@ -18,7 +18,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
-public class Node  implements NodeInterface, Serializable {
+public class Node implements NodeInterface, Serializable {
     public static final int port = 1024;
     private static final long serialVersionUID = -6663545639371364731L;
     String name;
@@ -27,7 +27,7 @@ public class Node  implements NodeInterface, Serializable {
     private ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
 
 
-    public Node() throws RemoteException {
+    public Node() {
         try {
             this.nodeaddress = getSelfIP();
             this.name = nodeaddress.getHostName();
@@ -36,7 +36,7 @@ public class Node  implements NodeInterface, Serializable {
         }
     }
 
-    public Node(String name) throws RemoteException{
+    public Node(String name) {
         this.name = name;
         try {
             this.nodeaddress = getSelfIP();
@@ -47,13 +47,19 @@ public class Node  implements NodeInterface, Serializable {
 
     /*
     TODO
-    1. Make Bootstrap such that if its not able to contact any node, then consider all node dead and create new zone...
+    0. Make The server gracefully exit in case of failed bootstrap...
+    .5 Check and revise conditions for which node will deny splitting
+    .75 work on peer splitting algo
+    1. Implement the Server which accepts commands
     2. Start work on other Modules as well...
-    3. Implement the Server which accepts commands
-    4. Implement the Hash Algo
+    3. Implement the Hash Algo
+    4. Make Bootstrap such that if its not able to contact any node, then consider all node dead and create new zone...
+    5. Add a few comments so that i have some fucking idea what ive done...
     */
-    public static void main(String[] args) throws RemoteException {
+    public static void main(String[] args) {
 
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
         Node node = new Node();
         try {
 
@@ -63,11 +69,11 @@ public class Node  implements NodeInterface, Serializable {
             System.out.println("Client Server Startup Complete\nNode Name -- " + node.getName());
             System.out.println("ip -- " + node.getIP().getHostAddress());
         } catch (AccessException e) {
-            System.out.println("Client server Startup Failure " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Client server Startup Failure ...");
+            node.shutdown(e);
         } catch (RemoteException e) {
-            System.out.println("Client server Startup Failure " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Client server Startup Failure ...");
+            node.shutdown(e);
         }
 
         try {
@@ -78,13 +84,14 @@ public class Node  implements NodeInterface, Serializable {
                 node.printNode();
             } else {
                 System.out.println("Bootstrap Error--- exiting the system");
-                node.shutdown();
+                node.shutdown(null);
             }
         } catch (RemoteException e) {
-            e.printStackTrace();
+            node.shutdown(e);
         } catch (NotBoundException e) {
-            e.printStackTrace();
+            node.shutdown(e);
         }
+        node.run();
     }
 
     public InetAddress getSelfIP() throws SocketException, UnknownHostException {
@@ -226,8 +233,13 @@ public class Node  implements NodeInterface, Serializable {
         return returnMessage;
     }
 
-    public void shutdown() {
+    public void shutdown(Exception exception) {
         System.out.println("Shutting down RMI server");
+        if (exception != null) {
+            System.out.println("The following error lead to the shutdown");
+            System.err.println(exception.getMessage());
+            exception.printStackTrace();
+        }
         try {
 
             Registry registry = LocateRegistry.getRegistry();
@@ -245,9 +257,21 @@ public class Node  implements NodeInterface, Serializable {
         Runtime.getRuntime().gc();
         // tell main to finish
 
+        System.exit(-1);
+
+    }
+
+    void view(String nodeName){
+        if(nodeName.toUpperCase().equals(this.name.toUpperCase())){
+            this.printNode();
+        }
+        else{
+            //todo
+        }
     }
 
     void printNode() {
+        System.out.println("\n*******************************");
         System.out.println("IP -- " + this.getIP());
         System.out.println("Name -- " + this.name);
         System.out.println("Zone and file details ---");
@@ -282,5 +306,22 @@ public class Node  implements NodeInterface, Serializable {
         return nodeaddress;
     }
 
+    void run() {
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) {
+            String argumet = scanner.next();
+            String[] command =  argumet.split(" ",0);
+            switch (command[0].toUpperCase()){
+                case "VIEW":
+                    if (command[1] == null){
+                        System.out.println("Please mention name of the peer to display... ");
+                        break;
+                    }
+                    this.view(command[1]);
+            }
+        }
+
+    }
 
 }
