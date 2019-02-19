@@ -133,6 +133,30 @@ public class Zone implements Serializable {
         return returnValue;
     }
 
+    public StringBuilder returnZoneStatus() {
+        StringBuilder returnBuilder = new StringBuilder();
+        if (height == -1) {
+            returnBuilder.append("The zone doesnt exist or hasent been initialised");
+        } else {
+            returnBuilder.append("****************\n");
+            returnBuilder.append("The Zone's boundries are... \n\t[{" + this.basePoint.x + ", " + this.basePoint.y + "}, {"
+                    + this.basePoint.x + ", " + (this.basePoint.y + height) + "}, {"
+                    + (this.basePoint.x + widht) + ", " + (this.basePoint.y + height) + "}, {"
+                    + (this.basePoint.x + widht) + ", " + this.basePoint.y + "}]");
+            returnBuilder.append("The File's are.. ");
+            Iterator it = this.fileList.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<Point, ArrayList<String>> fileEntry = (Map.Entry) it.next();
+                returnBuilder.append("Point {" + fileEntry.getKey().x + ", " + fileEntry.getKey().y + "} has the following files");
+                for (int i = 0; i < fileEntry.getValue().size(); i++) {
+                    returnBuilder.append("\t" + (i + 1) + "--> " + fileEntry.getValue().get(i));
+                }
+
+            }
+        }
+        return returnBuilder;
+    }
+
     public void printZone() {
         if (height == -1) {
             System.out.println("The zone doesnt exist or hasent been initialised");

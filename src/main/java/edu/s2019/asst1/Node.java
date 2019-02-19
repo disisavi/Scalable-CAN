@@ -25,6 +25,7 @@ public class Node implements NodeInterface, Serializable {
     InetAddress nodeaddress;
     private Zone zone;
     private ArrayList<NodeInterface> peers = new ArrayList<NodeInterface>();
+    private DNSInterface dnsStub;
 
 
     public Node() {
@@ -77,9 +78,9 @@ public class Node implements NodeInterface, Serializable {
         }
 
         try {
-            DNSInterface dnsStub = node.getDnsStub();
-            if (node.bootstrap(dnsStub)) {
-                dnsStub.registerNode(node.name, node.getIP().getHostAddress());
+            node.dnsStub = node.setDnsStub();
+            if (node.bootstrap()) {
+                node.dnsStub.registerNode(node.name, node.getIP().getHostAddress());
                 System.out.println("Bootstrapping success... ");
                 node.printNode();
             } else {
@@ -92,6 +93,7 @@ public class Node implements NodeInterface, Serializable {
             node.shutdown(e);
         }
         node.run();
+        node.shutdown(null);
     }
 
     public InetAddress getSelfIP() throws SocketException, UnknownHostException {
@@ -111,7 +113,7 @@ public class Node implements NodeInterface, Serializable {
         return this.nodeaddress.equals(node.nodeaddress) && this.name.equals(node.name);
     }
 
-    public DNSInterface getDnsStub() throws RemoteException, NotBoundException {
+    public DNSInterface setDnsStub() throws RemoteException, NotBoundException {
 
         Scanner scanner = new Scanner(System.in);
         System.out.println("Enter the DNS server ip ");
@@ -122,11 +124,11 @@ public class Node implements NodeInterface, Serializable {
         return dns;
     }
 
-    public boolean bootstrap(DNSInterface dns) {
+    public boolean bootstrap() {
 
-        HashMap<String, String> response = new HashMap<>();
+        ArrayList<NodeInterface> response = new ArrayList<>();
         try {
-            response = dns.returnNodeList();
+            response = this.dnsStub.returnNodeList();
         } catch (Exception e) {
             System.err.println("Client Bootstrap Failure for " + this.name);
             System.err.println("Client exception: " + e.toString());
@@ -141,13 +143,17 @@ public class Node implements NodeInterface, Serializable {
             AbstractMap.SimpleEntry<String, String> nodeID = null;
             do {
                 Point p2 = getCordinateToBind();
-                for (String key : response.keySet()) {
-                    nodeID = routeToNode(key, response.get(key), p2);
+                for (NodeInterface bootNode : response) {
+                    nodeID = routeToNode(bootNode, p2);
                     if (nodeID != null) {
                         break;
                     }
                 }
-            } while (!splitWithNode(nodeID));
+            } while (nodeID != null && !splitWithNode(nodeID));
+
+            if (nodeID == null) {
+                return false;
+            }
         }
         return true;
     }
@@ -159,14 +165,13 @@ public class Node implements NodeInterface, Serializable {
         return new Point(x, y);
     }
 
-    public AbstractMap.SimpleEntry<String, String> routeToNode(String nodeName, String nodeIP, Point point) {
+    public AbstractMap.SimpleEntry<String, String> routeToNode(NodeInterface node, Point point) {
         AbstractMap.SimpleEntry<String, String> response = null;
         try {
-            Registry noderegistry = LocateRegistry.getRegistry(nodeIP, Node.port);
-            NodeInterface node = (NodeInterface) noderegistry.lookup(nodeName);
+
             response = node.findNodeToPoint(point);
         } catch (Exception e) {
-            System.err.println("Client RMI failure couldnt Contact Node " + nodeName + " - " + nodeIP + " while Routing");
+            System.err.println("Client RMI failure couldnt execute Peer Method while Routing");
             System.out.println("Client exception: " + e.toString());
             e.printStackTrace();
         }
@@ -261,13 +266,44 @@ public class Node implements NodeInterface, Serializable {
 
     }
 
-    void view(String nodeName){
-        if(nodeName.toUpperCase().equals(this.name.toUpperCase())){
-            this.printNode();
+    void view(String nodeName, Boolean showAllFlag) {
+        try {
+            if (showAllFlag) {
+                ArrayList<NodeInterface> allNodesInCAN = this.dnsStub.returnAllNodes();
+                for (NodeInterface nodestub : allNodesInCAN) {
+                    System.out.println(nodestub.returnNodeStatus());
+                }
+            } else if (nodeName.toUpperCase().equals(this.name.toUpperCase())) {
+                this.printNode();
+            } else {
+                NodeInterface nodeStub = dnsStub.returnNode(nodeName);
+                System.out.println(nodeStub.returnNodeStatus());
+            }
+        } catch (Exception e) {
+            System.out.println("Error in Printing Node. Printing StackTrace. After that, we will still be on with business");
+            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
-        else{
-            //todo
+    }
+
+    public String returnNodeStatus() {
+        StringBuilder returnBuilder = new StringBuilder();
+
+        returnBuilder.append("\n*******************************");
+        returnBuilder.append("IP -- " + this.getIP());
+        returnBuilder.append("Name -- " + this.name);
+        returnBuilder.append("Zone and file details ---");
+        returnBuilder.append(this.zone.returnZoneStatus());
+        returnBuilder.append("Peers --");
+        try {
+            for (NodeInterface peers : this.peers) {
+                returnBuilder.append(peers.getName());
+
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
+        return returnBuilder.toString();
     }
 
     void printNode() {
@@ -308,20 +344,34 @@ public class Node implements NodeInterface, Serializable {
 
     void run() {
         Scanner scanner = new Scanner(System.in);
-
-        while (true) {
+        boolean runAlways = true;
+        while (runAlways) {
             String argumet = scanner.next();
-            String[] command =  argumet.split(" ",0);
-            switch (command[0].toUpperCase()){
+            String[] command = argumet.split(" ", 0);
+            switch (command[0].toUpperCase()) {
                 case "VIEW":
-                    if (command[1] == null){
-                        System.out.println("Please mention name of the peer to display... ");
-                        break;
+                    boolean showALlFlag = false;
+                    if (command[1] == null) {
+                        showALlFlag = true;
                     }
-                    this.view(command[1]);
+                    this.view(command[1], showALlFlag);
+                    break;
+                case "INSERT":
+                    System.out.println("Under Construction");
+                    break;
+                case "EXIT":
+                    System.out.println("************\nExiting");
+                    runAlways = false;
+                default:
+                    System.out.println("Please enter one of the printed commands");
+                    this.showAvailableComands();
             }
         }
-
     }
-
+    void showAvailableComands(){
+        System.out.println("The following commands are available as now");
+        System.out.println("1. View  --> Display the information of a specified peer peer where peer is a node identifier, not an IP address. The information includes the node identifier, the IP address, the coordinate, a list of neighbors, and the data items currently stored at the peer. If no peer is given, display the information of all currently active peers.");
+        System.out.println("2. Insert --> UnderConstruction");
+        System.out.println("Exit --> To exit");
+    }
 }

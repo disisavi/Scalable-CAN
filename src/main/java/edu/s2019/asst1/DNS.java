@@ -1,6 +1,7 @@
 package edu.s2019.asst1;
 
 import edu.s2019.asst1.implement.DNSInterface;
+import edu.s2019.asst1.implement.NodeInterface;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -12,12 +13,13 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
 public class DNS implements DNSInterface {
     public static final int port = 1024;
-    public HashMap<String, String> nodesInCAN = new HashMap<>();
+    public HashMap<String, NodeInterface> nodesInCAN = new HashMap<>();
     public InetAddress ip;
 
     public DNS() {
@@ -55,25 +57,41 @@ public class DNS implements DNSInterface {
     }
 
     @Override
-    public HashMap<String, String> returnNodeList() {
-        Object[] keys = this.nodesInCAN.keySet().toArray();
-        HashMap<String, String> returnMap = new HashMap<>();
+    public ArrayList<NodeInterface> returnNodeList() {
+        Object[] values = this.nodesInCAN.values().toArray();
+        ArrayList<NodeInterface> returnList = new ArrayList<>();
         if (!nodesInCAN.isEmpty()) {
             for (int i = 0; i < 3; i++) {
                 Random random = new Random();
                 int n = random.nextInt(nodesInCAN.size());
-                returnMap.put((String) keys[n], nodesInCAN.get(keys[n]));
-
+                returnList.add((NodeInterface) values[n]);
             }
         }
-        return returnMap;
+        return returnList;
+    }
+
+    public NodeInterface getRegisteryForNode(String name, String iP) throws RemoteException, NotBoundException {
+        Registry nodeRegistry = LocateRegistry.getRegistry(iP, Node.port);
+        NodeInterface nodeStub = (NodeInterface) nodeRegistry.lookup(name);
+        return nodeStub;
     }
 
     public void registerNode(String name, String iP) {
-        nodesInCAN.put(name, iP);
-        System.out.println("Node Registered");
-        System.out.println("Name -- " + name);
-        System.out.println("IP -- " + iP);
+
+
+        NodeInterface nodeStub = null;
+        try {
+            nodeStub = getRegisteryForNode(name, iP);
+            nodesInCAN.put(name, nodeStub);
+            System.out.println("\n******************");
+            System.out.println("Node Registered");
+            System.out.println("Name -- " + name);
+            System.out.println("IP -- " + iP);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (NotBoundException e) {
+            e.printStackTrace();
+        }
     }
 
     public void deregisterNode(Node node) {
