@@ -19,7 +19,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class Node implements NodeInterface, Serializable {
-    public static final int port = 11233;
+    static final int port = 11233;
     private static final long serialVersionUID = -6663545639371364731L;
     String name;
     InetAddress nodeaddress;
@@ -27,6 +27,7 @@ public class Node implements NodeInterface, Serializable {
     private HashMap<String, NodeInterface> peers;
     private DNSInterface dnsStub;
     public boolean isBootstraped;
+    public NodeInterface selfStub;
 
 
     public Node() {
@@ -44,8 +45,6 @@ public class Node implements NodeInterface, Serializable {
     TODO
     1. Im pretty sure there are some reduntant methods. Get rid of them
     1. Go through the code for consistent fault tolerance and relevant messages
-    3. Implement  one more command
-    5. Add a few comments so that i have some fucking idea what ive done...
     */
     public static void main(String[] args) {
         Node node = new Node();
@@ -61,12 +60,10 @@ public class Node implements NodeInterface, Serializable {
                 registry = LocateRegistry.getRegistry(Node.port);
             }
             NodeInterface nodeStub = (NodeInterface) UnicastRemoteObject.exportObject(node, Node.port);
+            node.selfStub = nodeStub;
             registry.rebind(node.getName(), nodeStub);
             System.out.println("Client Server Startup Complete\nNode Name -- " + node.getName());
             System.out.println("ip -- " + node.getIP().getHostAddress());
-        } catch (AccessException e) {
-            System.out.println("Client server Startup Failure ...");
-            node.shutdown(e);
         } catch (RemoteException e) {
             System.out.println("Client server Startup Failure ...");
             node.shutdown(e);
@@ -126,6 +123,7 @@ public class Node implements NodeInterface, Serializable {
     }
 
     public boolean insertFile(String hostname, String fileName) {
+        System.out.println("\n\n**********");
         if (hostname.toUpperCase().equals("SELF")
                 || hostname.toUpperCase().equals(this.name.toUpperCase())) {
             if (hostname.toUpperCase().equals(this.name.toUpperCase())) {
@@ -175,6 +173,7 @@ public class Node implements NodeInterface, Serializable {
             try {
                 nodeStub = this.dnsStub.returnNode(hostname);
                 nodeStub.insertFile(hostname, fileName);
+                System.out.println("File added to the peer");
             } catch (RemoteException e) {
                 System.out.println("Unable to add File because. We are still on with business." + e.getMessage());
                 e.printStackTrace();
@@ -201,33 +200,37 @@ public class Node implements NodeInterface, Serializable {
 
             Point2D.Float fileInPoint = Zone.fileToPoint(fileName);
             System.out.println("File is in Point " + fileInPoint.toString());
+            if (this.isBootstraped) {
+                if (!this.zone.isPointInZone(fileInPoint)) {
+                    AbstractMap.SimpleEntry<String, String> nodeID;
+                    try {
+                        nodeID = findNodeToPoint(fileInPoint);
+                    } catch (RemoteException e) {
+                        System.out.println("Couldn't Find the Node... Aborting the mission for now. After StackTrace, Server will still be running for further operations");
+                        System.out.println(e.getMessage());
+                        e.printStackTrace();
+                        return null;
+                    }
+                    try {
+                        NodeInterface nodeStub = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
+                        AbstractMap.SimpleEntry<String, Point2D.Float> fileInfo = nodeStub.getFile(fileName);
+                        this.printReturnedFileInfo(fileInfo, fileName);
+                        return fileInfo;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                } else {
+                    AbstractMap.SimpleEntry<String, Point2D.Float> fileInfo = null;
 
-            if (!this.zone.isPointInZone(fileInPoint)) {
-                AbstractMap.SimpleEntry<String, String> nodeID;
-                try {
-                    nodeID = findNodeToPoint(fileInPoint);
-                } catch (RemoteException e) {
-                    System.out.println("Couldn't Find the Node... Aborting the mission for now. After StackTrace, Server will still be running for further operations");
-                    System.out.println(e.getMessage());
-                    e.printStackTrace();
-                    return null;
-                }
-                try {
-                    NodeInterface nodeStub = this.getNodeStub(nodeID.getKey(), nodeID.getValue());
-                    AbstractMap.SimpleEntry<String, Point2D.Float> fileInfo = nodeStub.getFile(fileName);
+                    fileInfo = this.getFile(fileName);
                     this.printReturnedFileInfo(fileInfo, fileName);
                     return fileInfo;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    return null;
                 }
             } else {
-                AbstractMap.SimpleEntry<String, Point2D.Float> fileInfo = null;
-
-                fileInfo = this.getFile(fileName);
-                this.printReturnedFileInfo(fileInfo, fileName);
-                return fileInfo;
+                System.out.println("The node is not yet bootstrapped. Please use some other node...");
             }
+
         }
 
         System.out.println("****File will be searched by the server " + hostname);
@@ -302,6 +305,10 @@ public class Node implements NodeInterface, Serializable {
         return dns;
     }
 
+    public void setPeers(String name, NodeInterface peer) {
+        this.peers.put(name, peer);
+    }
+
     public boolean bootstrap() {
 
         ArrayList<NodeInterface> response;
@@ -326,7 +333,7 @@ public class Node implements NodeInterface, Serializable {
             e.printStackTrace();
         }
 
-        if (response.size() == 0 && isFirst) {
+        if (response.size() == 0 || isFirst) {
             System.out.println("We are the first node to join CAN... ");
             this.zone = new Zone();
             return true;
@@ -351,10 +358,10 @@ public class Node implements NodeInterface, Serializable {
 
     public AbstractMap.SimpleEntry<String, Point2D.Float> getFile(String filename) {
         Point2D.Float filePoint = Zone.fileToPoint(filename);
-        AbstractMap.SimpleEntry<String, Point2D.Float> returnMap = null;
+        AbstractMap.SimpleEntry<String, Point2D.Float> returnMap;
         if (this.isBootstraped) {
             if (this.zone.isPointInZone(filePoint)) {
-                if (this.zone.fileList.get(filePoint).contains(filename.toUpperCase())) {
+                if (this.zone.fileList.get(filePoint) != null && this.zone.fileList.get(filePoint).contains(filename)) {
                     returnMap = new AbstractMap.SimpleEntry<>(this.name, filePoint);
                 } else {
                     returnMap = new AbstractMap.SimpleEntry<>(this.name, new Point2D.Float(-1, -1));
@@ -376,20 +383,23 @@ public class Node implements NodeInterface, Serializable {
     public AbstractMap.SimpleEntry<String, String> routeToNode(NodeInterface node, Point2D.Float point) {
         AbstractMap.SimpleEntry<String, String> response = null;
 
-        if (isBootstraped) {
-            try {
+        try {
 
-                response = node.findNodeToPoint(point);
-            } catch (Exception e) {
-                System.err.println("Client RMI failure couldnt execute Peer Method while Routing");
-                System.out.println("Client exception: " + e.toString());
-                e.printStackTrace();
-            }
+            response = node.findNodeToPoint(point);
+        } catch (Exception e) {
+            System.err.println("Client RMI failure couldnt execute Peer Method while Routing");
+            System.out.println("Client exception: " + e.toString());
+            e.printStackTrace();
         }
+
         return response;
     }
 
     public AbstractMap.SimpleEntry<String, String> findNodeToPoint(Point2D.Float point) throws RemoteException {
+        if (!this.isBootstraped) {
+            return null;
+        }
+
         if (this.zone.isPointInZone(point)) {
             AbstractMap.SimpleEntry<String, String> returnEntry = new AbstractMap.SimpleEntry<>(this.name, this.nodeaddress.getHostAddress());
             return returnEntry;
@@ -427,6 +437,10 @@ public class Node implements NodeInterface, Serializable {
                 this.peers = new HashMap<>();
             }
             this.peers.put(nodeID.getKey(), node);
+
+            for (NodeInterface nodestub : this.peers.values()) {
+                nodestub.setPeers(this.name, this.selfStub);
+            }
 
         } catch (Exception e) {
             System.err.println("Client RMI failure couldnt Contact Node " + nodeID.getKey() + " while splitting");
@@ -546,6 +560,115 @@ public class Node implements NodeInterface, Serializable {
         }
     }
 
+    public void clearPeers(){
+            this.peers.clear();
+    }
+
+    public void clearZone(){
+        this.zone = null;
+    }
+    public void clearIsBootstrap(){
+        this.isBootstraped = false;
+    }
+
+    public boolean leave() {
+        boolean pass = false;
+        if (this.isBootstraped) {
+            System.out.println("Leaving the CAN... The resulting CAN structure will be visible in the node with which Zones are merging");
+
+            try {
+                for (NodeInterface peers : this.peers.values()) {
+                    if (peers.getZone().zoneShareWall(this.zone)) {
+                        peers.getZone().mergeZone(this.zone);
+                        for (Map.Entry<String, NodeInterface> entry : this.peers.entrySet()) {
+                            peers.setPeers(entry.getKey(), entry.getValue());
+                        }
+                        System.out.println("Joined with " + peers.getName());
+                        pass = true;
+                        break;
+                    }
+                }
+                if (pass) {
+                    this.view(null, true);
+                    this.isBootstraped = false;
+                } else {
+                    System.out.println("error in leaving because  no neighbour was ready for takeover");
+
+                }
+            } catch (RemoteException e) {
+                if (pass) {
+                    this.view(null, true);
+                    this.isBootstraped = false;
+                } else {
+                    System.out.println("error in leaving because either no neigbour was ready for takeover, or  " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            System.out.println("The Node in not Part of CAN.... ");
+        }
+        return pass;
+    }
+
+    public void leave(String hostname, Boolean leaveAll) {
+        System.out.println("\n\n\n*********");
+        try {
+            if (leaveAll) {
+                ArrayList<NodeInterface> nodeStubList = new ArrayList<>();
+                try {
+                    nodeStubList = this.dnsStub.returnAllNodes();
+                } catch (RemoteException e) {
+                    System.out.println("Unable to contact DNS... ");
+                    e.printStackTrace();
+                }
+
+                ArrayList<Exception> exceptions = new ArrayList<>();
+                for (NodeInterface nodestub : nodeStubList) {
+                    try {
+                        if (!this.name.equals(nodestub.getName())) {
+                            nodestub.clearPeers();
+                            nodestub.clearZone();
+                            nodestub.clearIsBootstrap();
+                        }
+
+
+                    } catch (RemoteException e) {
+                        exceptions.add(e);
+                        System.out.println("Error In contacting node in CAN -- " + e.getMessage()
+                                + "\nSDetailed stackTrace will be printed once all nodes have left");
+                    }
+                }
+                this.clearPeers();
+                this.clearZone();
+                this.clearIsBootstrap();
+                for(Exception e : exceptions){
+                    e.printStackTrace();
+                }
+                System.out.println(" \n\n ******");
+                System.out.println("Leave done... ");
+                this.view(null, true);
+            } else if (hostname.toUpperCase().equals(this.name.toUpperCase())
+                    || hostname.toUpperCase().equals("SELF")) {
+                this.leave();
+            } else {
+                try {
+                    NodeInterface nodestub = this.dnsStub.returnNode(hostname);
+                    nodestub.leave();
+                } catch (RemoteException e) {
+                    System.out.println("Couldnt Contact Node " + hostname);
+                    e.printStackTrace();
+                } catch (NullPointerException e) {
+                    System.out.println("The node Doesnt Exit in DNS. Kindly check the spelling");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("UnExpected Exception... ");
+            System.out.println("Still in business ...");
+            e.printStackTrace();
+
+        }
+    }
+
 
     public boolean join() {
         if (!this.isBootstraped) {
@@ -566,7 +689,7 @@ public class Node implements NodeInterface, Serializable {
     }
 
     public boolean join(String hostname, Boolean joinAll) {
-
+        System.out.println("\n\n\n*********");
         try {
             if (joinAll) {
                 ArrayList<NodeInterface> nodeStubList;
@@ -577,21 +700,23 @@ public class Node implements NodeInterface, Serializable {
                     e.printStackTrace();
                     return false;
                 }
+                System.out.println("We have " + nodeStubList.size() + " Nodes");
+
                 ArrayList<Exception> exceptions = new ArrayList<>();
                 for (NodeInterface nodestub : nodeStubList) {
                     try {
+                        System.out.println("Tryin Node " + nodestub.getName());
                         if (nodestub.join()) {
                             System.out.println("Node " + nodestub.getName() + " Successfully Bootstrapped and is now part of CAN");
                             System.out.println("Printing Node that joined...");
                             System.out.println(nodestub.returnNodeStatus());
-                            return true;
+
                         }
                     } catch (RemoteException e) {
                         exceptions.add(e);
                         System.out.println("Error In contacting node in CAN -- " + e.getMessage()
                                 + "\nSDetailed stackTrace will be printed once we have joined remaining Nodes");
                     }
-                    return false;
                 }
             } else if (hostname.toUpperCase().equals(this.name.toUpperCase())
                     || hostname.toUpperCase().equals("SELF")) {
@@ -607,11 +732,13 @@ public class Node implements NodeInterface, Serializable {
                         System.out.println("Node " + hostname + " Successfully Bootstrapped and is now part of CAN");
                         System.out.println("Printing Node that joined...");
                         System.out.println(nodestub.returnNodeStatus());
-                    }
+                    } else System.out.println("The node coudlnt join. Check the stacktrace in node" + hostname);
                 } catch (RemoteException e) {
                     System.out.println("Couldnt Contact Node " + hostname);
                     e.printStackTrace();
                     return false;
+                } catch (NullPointerException e) {
+                    System.out.println("The node Doesnt Exit in DNS. Kindly check the spelling");
                 }
 
             }
@@ -677,11 +804,6 @@ public class Node implements NodeInterface, Serializable {
         return zone;
     }
 
-    @Override
-    public HashMap<String, NodeInterface> getPeers() {
-        return peers;
-    }
-
     public InetAddress getIP() {
         return nodeaddress;
     }
@@ -694,7 +816,6 @@ public class Node implements NodeInterface, Serializable {
 
             String argumet = scanner.nextLine();
             String[] command = argumet.trim().split(" ", 2);
-
             switch (command[0].toUpperCase()) {
                 case "VIEW":
                     boolean showALlFlag = false;
@@ -744,6 +865,17 @@ public class Node implements NodeInterface, Serializable {
                     }
                     this.join(hostname, joinAll);
                     break;
+                case "LEAVE":
+                    boolean leaveAll = false;
+                    hostname = null;
+                    if (command.length == 1) {
+                        leaveAll = true;
+
+                    } else {
+                        hostname = command[1];
+                    }
+                    this.leave(hostname, leaveAll);
+                    break;
                 case "SHOW":
                     this.showAvailableComands();
                     break;
@@ -767,12 +899,13 @@ public class Node implements NodeInterface, Serializable {
 
     void showAvailableComands() {
         System.out.println("\n#####################");
-        System.out.println("The following commands are available as now");
-        System.out.println("1. View  --> Display the information of a specified peer peer where peer is a node identifier, not an IP address. The information includes the node identifier, the IP address, the coordinate, a list of neighbors, and the data items currently stored at the peer. If no peer is given, display the information of all currently active peers.");
+        System.out.println("The following commands have been implemented");
+        System.out.println("1. View  --> View \"NodeName\". If you want to print local node, type in \"self\". if you leave \"NodeName\" as blank, it will print node info of all the nodes");
         System.out.println("2. Insert --> Insert NodeName(\"Self\" for local Node) FileName");
-        System.out.println("3. Show --> To show list of all available commands");
+        System.out.println("3. Join --> Join \"NodeName\". To join local node, type in \"Self\" in \"NodeName\" to join local node.");
+        System.out.println("Bonus Commands");
         System.out.println("4. Clear --> To Clear the console, so that we may better see the results.");
-        System.out.println("5. Join --> So that the newly minted node can JOIN the CAN");
+        System.out.println("5. Show --> To show list of all available commands");
         System.out.println("Exit --> To exit\nPlease type in the command...");
     }
 }

@@ -236,10 +236,10 @@ public class Zone implements Serializable {
         }
 
         if (fileList.get(point) != null) {
-            fileList.get(point).add(fileName.toUpperCase());
+            fileList.get(point).add(fileName);
         } else {
             ArrayList<String> toAdd = new ArrayList<>();
-            toAdd.add(fileName.toUpperCase());
+            toAdd.add(fileName);
             fileList.put(point, toAdd);
         }
 

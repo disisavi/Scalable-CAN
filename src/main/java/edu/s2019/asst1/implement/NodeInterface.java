@@ -16,7 +16,15 @@ public interface NodeInterface extends Remote {
 
     Zone getZone() throws RemoteException;
 
-    HashMap<String, NodeInterface> getPeers() throws RemoteException;
+    void setPeers(String name, NodeInterface peer) throws RemoteException;
+
+    void clearPeers() throws RemoteException;
+
+    void clearZone() throws RemoteException;
+
+    boolean leave() throws RemoteException;
+
+    void clearIsBootstrap () throws RemoteException;
 
     InetAddress getIP() throws RemoteException;
 
