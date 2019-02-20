@@ -903,6 +903,7 @@ public class Node implements NodeInterface, Serializable {
         System.out.println("1. View  --> View \"NodeName\". If you want to print local node, type in \"self\". if you leave \"NodeName\" as blank, it will print node info of all the nodes");
         System.out.println("2. Insert --> Insert NodeName(\"Self\" for local Node) FileName");
         System.out.println("3. Join --> Join \"NodeName\". To join local node, type in \"Self\" in \"NodeName\" to join local node.");
+        System.out.println("4. Leave --> Leave \"NodeName\". To leave local node, type in \"Self\" in \"NodeName\" for local node to leave.");
         System.out.println("Bonus Commands");
         System.out.println("4. Clear --> To Clear the console, so that we may better see the results.");
         System.out.println("5. Show --> To show list of all available commands");
