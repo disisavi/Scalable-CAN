@@ -65,11 +65,13 @@ public class DNS implements DNSInterface {
         Object[] values = this.nodesInCAN.values().toArray();
         ArrayList<NodeInterface> returnList = new ArrayList<>();
         if (!nodesInCAN.isEmpty()) {
-            for (int i = 0; i < nodesInCAN.size(); i++) {
-                Random random = new Random();
-                int n = random.nextInt(nodesInCAN.size());
-                returnList.add((NodeInterface) values[n]);
-            }
+//            for (int i = 0; i < nodesInCAN.size(); i++) {
+//                Random random = new Random();
+//                int n = random.nextInt(nodesInCAN.size());
+//                returnList.add((NodeInterface) values[n]);
+//            }
+
+            return new ArrayList<>(nodesInCAN.values());
         }
         return returnList;
     }
