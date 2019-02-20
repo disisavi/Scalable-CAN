@@ -46,6 +46,7 @@ public class DNS implements DNSInterface {
             registry.rebind(name, stub);
             System.out.println("DNS Online");
             System.out.println("DNS information --\nip --> " + dns.ip.getHostAddress());
+            System.out.println("On server "+dns.ip.getHostName());
             System.out.println("Nodes stores --> " + dns.nodesInCAN.size());
         } catch (AccessException e) {
             System.out.println("DNS server Failure ...");

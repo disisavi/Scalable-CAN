@@ -36,5 +36,13 @@ public interface NodeInterface extends Remote {
 
     boolean insertFile(String filename, Point2D.Float point) throws RemoteException;
 
-    public boolean insertFile(String hostname, String fileName) throws RemoteException;
+    boolean insertFile(String hostname, String fileName) throws RemoteException;
+
+    AbstractMap.SimpleEntry<String, Point2D.Float> searchFile(String hostname, String fileName) throws RemoteException;
+
+    AbstractMap.SimpleEntry getFile(String filename) throws RemoteException;
+
+    boolean join() throws RemoteException;
+
+    boolean getIsBootstrapped() throws RemoteException;
 }

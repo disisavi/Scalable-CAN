@@ -212,7 +212,7 @@ public class Zone implements Serializable {
     }
 
     //The hash Function
-    public Point2D.Float fileToPoint(String fileName) {
+    public static Point2D.Float fileToPoint(String fileName) {
         Point2D.Float returnPoint = new Point2D.Float();
         int charAtOdd = 0, charAtEven = 0;
 
@@ -226,8 +226,6 @@ public class Zone implements Serializable {
         }
         returnPoint.x = charAtOdd % 10;
         returnPoint.y = charAtEven % 10;
-//        System.out.println("charAtOdd " + charAtOdd);
-//        System.out.println("Charateven " + charAtEven);
         return returnPoint;
     }
 
@@ -238,10 +236,10 @@ public class Zone implements Serializable {
         }
 
         if (fileList.get(point) != null) {
-            fileList.get(point).add(fileName);
+            fileList.get(point).add(fileName.toUpperCase());
         } else {
             ArrayList<String> toAdd = new ArrayList<>();
-            toAdd.add(fileName);
+            toAdd.add(fileName.toUpperCase());
             fileList.put(point, toAdd);
         }
 
