@@ -201,3 +201,13 @@ public class DNS implements DNSInterface {
         }
     }
 }
+
+/* TODO 
+ * 	1. code cleanup. For example i am creating stubs not really required while node splitting
+ * 	2. refactor it into possibly better structure 
+ * 	3. Add concurency support 
+ * 	4. Add support for actual file being added to the CAN
+ * 	5. Better console messages to alert the user of actions being taken
+ * 	6. Fault tolerence is really required... 
+ * 	7. Make a better and more usefull api... Like getall etc methods. 
+ */
